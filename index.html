@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#000000">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <title>GUM Guild Wars</title>
+  <link rel="manifest" href="manifest.json">
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Sora:wght@500;600;700&family=Chakra+Petch:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" rel="stylesheet">
+  <link href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" rel="stylesheet">
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.markercluster/1.5.3/MarkerCluster.css" rel="stylesheet">
+  <link href="css/styles.css" rel="stylesheet">
+</head>
+
+<body class="scroll-locked">
+
+  <!-- Reusable crest: an original spinning-top emblem -->
+  <svg width="0" height="0" style="position:absolute" aria-hidden="true">
+    <defs>
+      <symbol id="crest" viewBox="-100 -100 200 200">
+        <circle r="94" fill="none" stroke="currentColor" stroke-opacity=".35" stroke-width="1.5" />
+        <circle r="86" fill="none" stroke="var(--teal)" stroke-width="3" stroke-dasharray="4 7.26" />
+        <g class="crest-blades">
+          <g id="crest-wing">
+            <path d="M8 -26 C34 -44 70 -58 88 -24 C74 -34 50 -30 30 -10 Z" fill="var(--pink)" />
+            <path d="M30 -10 C50 -30 74 -34 88 -24 C70 -22 52 -14 40 0 Z" fill="#fff" fill-opacity=".85" />
+          </g>
+          <use href="#crest-wing" transform="rotate(120)" />
+          <use href="#crest-wing" transform="rotate(240)" />
+          <circle r="34" fill="#000" stroke="var(--teal)" stroke-width="3" />
+          <path d="M-18 -18 L18 18 M18 -18 L-18 18" stroke="var(--pink)" stroke-width="7" stroke-linecap="square" />
+          <circle r="7" fill="var(--teal)" />
+        </g>
+      </symbol>
+    </defs>
+  </svg>
+
+  <!-- Announcement -->
+  <div id="announcement" class="announcement-overlay" role="dialog" aria-modal="true" aria-labelledby="announcement-title">
+    <div class="announcement-card">
+      <svg class="announcement-crest" aria-hidden="true"><use href="#crest" /></svg>
+      <h2 id="announcement-title" class="announcement-title"><span data-bind="seasonLabel">Season</span> schedule</h2>
+      <ol id="announcement-schedule" class="announcement-schedule"></ol>
+      <p class="announcement-venue"><i class="fas fa-location-dot" aria-hidden="true"></i> <span data-bind="venue">Venue to be announced</span></p>
+      <button class="btn-primary" data-action="close-announcement">Continue to dashboard</button>
+    </div>
+  </div>
+
+  <!-- Loader -->
+  <div id="loader" role="status">
+    <svg class="loader-crest" aria-hidden="true"><use href="#crest" /></svg>
+    <div class="loading-text">Loading the guild hall…</div>
+  </div>
+
+  <!-- Header -->
+  <header class="hud">
+    <a href="./" class="hud-brand">
+      <svg class="hud-crest" aria-hidden="true"><use href="#crest" /></svg>
+      <span data-bind="brandName">GUM Guild Wars</span>
+    </a>
+
+    <button class="menu-toggle" id="menu-toggle" aria-label="Open menu" aria-expanded="false" aria-controls="navbar-menu">
+      <span class="bar"></span><span class="bar"></span><span class="bar"></span>
+    </button>
+
+    <nav class="hud-nav" id="navbar-menu" aria-label="Main">
+      <button class="nav-link" data-action="open-search"><i class="fas fa-magnifying-glass" aria-hidden="true"></i> Search</button>
+      <button class="nav-link" data-action="open-history"><i class="fas fa-scroll" aria-hidden="true"></i> Battle log</button>
+      <button class="nav-link" data-action="open-schedule"><i class="fa-regular fa-calendar" aria-hidden="true"></i> Schedule</button>
+      <button class="nav-link" data-action="open-brackets"><i class="fas fa-sitemap" aria-hidden="true"></i> Brackets</button>
+      <button class="nav-link" data-action="open-upload"><i class="fas fa-camera" aria-hidden="true"></i> Upload portrait</button>
+      <a class="nav-link" id="nav-social" href="#" target="_blank" rel="noopener"><i class="fab fa-facebook" aria-hidden="true"></i> Facebook</a>
+    </nav>
+  </header>
+
+  <div class="mock-ticker" role="note">
+    <i class="fas fa-flask" aria-hidden="true"></i>
+    <span>Sample data. These numbers are generated for testing and aren't real results.</span>
+  </div>
+
+  <main id="dashboard" class="dashboard">
+
+    <!-- Hero: crest + season path -->
+    <section class="hero" aria-labelledby="hero-title">
+      <div class="hero-text">
+        <h1 id="hero-title" class="hero-title" data-bind="brandName">GUM Guild Wars</h1>
+        <p class="hero-status" id="hero-status">Loading the season…</p>
+        <p class="hero-updated" id="update-time"></p>
+      </div>
+      <svg class="hero-crest" aria-hidden="true"><use href="#crest" /></svg>
+
+      <ol class="season-path" id="progress-container" aria-label="Season progress by week"></ol>
+      <p class="season-caption" id="season-caption"></p>
+    </section>
+
+    <!-- Top bladers -->
+    <section class="section" aria-labelledby="bladers-title">
+      <div class="section-head">
+        <h2 id="bladers-title" class="section-title">Top bladers</h2>
+        <p class="section-note">Ranked by MVP score. To qualify, a blader needs <span data-bind="minGames">3</span> games and at least half of their guild's matches.</p>
+      </div>
+      <div class="party">
+        <article id="mvp-hero" class="char-sheet"></article>
+        <ol id="mvp-list" class="party-list" start="2"></ol>
+      </div>
+    </section>
+
+    <!-- Season titles -->
+    <section class="section" aria-labelledby="titles-title">
+      <div class="section-head">
+        <h2 id="titles-title" class="section-title">Season titles</h2>
+        <p class="section-note">Held by whoever leads each record right now. Per-game titles only count qualified bladers.</p>
+      </div>
+      <dl class="titles" id="titles-list"></dl>
+    </section>
+
+    <!-- How battles end + finish leaders -->
+    <section class="section" aria-labelledby="meta-title">
+      <div class="section-head">
+        <h2 id="meta-title" class="section-title">How battles end</h2>
+        <p class="section-note">Every round won this season, by the finish that won it.</p>
+      </div>
+      <div class="meta-bar" id="meta-bar" role="img"></div>
+      <ul class="meta-legend" id="meta-legend"></ul>
+
+      <h3 class="subsection-title">Finish leaders</h3>
+      <div class="command-tabs" id="finish-pills" role="tablist" aria-label="Finish type"></div>
+
+      <div class="table-pair">
+        <div class="panel">
+          <h4 class="panel-title" id="overall-finish-title">Whole season</h4>
+          <div class="table-wrap">
+            <table class="data-table">
+              <thead><tr><th class="col-rank">Rank</th><th>Blader</th><th class="num" data-finish-label>Per game</th></tr></thead>
+              <tbody id="overall-finish-body"></tbody>
+            </table>
+          </div>
+        </div>
+        <div class="panel">
+          <h4 class="panel-title" id="weekly-finish-title">This week</h4>
+          <div class="table-wrap">
+            <table class="data-table">
+              <thead><tr><th class="col-rank">Rank</th><th>Blader</th><th class="num" data-finish-label>Per game</th></tr></thead>
+              <tbody id="weekly-finish-body"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Guild standings -->
+    <section class="section" aria-labelledby="guilds-title">
+      <div class="section-head">
+        <h2 id="guilds-title" class="section-title">Guild standings</h2>
+        <p class="section-note">Ranked by match wins, then win rate, set difference and point difference. Official final results are posted on the bracket pages.</p>
+      </div>
+
+      <div class="banners" id="bracket-leaders"></div>
+
+      <div class="command-tabs" id="bracket-pills" role="tablist" aria-label="Bracket"></div>
+
+      <div class="table-pair">
+        <div class="panel">
+          <h4 class="panel-title" id="bracket-team-title">Guilds</h4>
+          <div class="table-wrap">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th class="col-rank">Rank</th><th>Guild</th>
+                  <th class="num">W–L</th><th class="num">Win rate</th><th class="num col-diff">Sets ±</th><th class="num col-diff">Points ±</th>
+                </tr>
+              </thead>
+              <tbody id="bracket-team-body"></tbody>
+            </table>
+          </div>
+        </div>
+        <div class="panel">
+          <h4 class="panel-title" id="bracket-player-title">Bladers</h4>
+          <div class="table-wrap">
+            <table class="data-table">
+              <thead><tr><th class="col-rank">Rank</th><th>Blader</th><th class="num">MVP score</th></tr></thead>
+              <tbody id="bracket-player-body"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Guild ranking -->
+    <section class="section" aria-labelledby="ranking-title">
+      <div class="section-head">
+        <h2 id="ranking-title" class="section-title">Guild ranking</h2>
+        <p class="section-note">The top guilds in the league, best record first.</p>
+      </div>
+      <ol id="team-leaderboard" class="ranking"></ol>
+    </section>
+
+    <!-- Territories -->
+    <section class="section" aria-labelledby="map-title">
+      <div class="section-head">
+        <h2 id="map-title" class="section-title">Guild territories</h2>
+        <p class="section-note">Each logo marks a guild's home base. Select one to see its record. The teal glow is brighter where guilds win more.</p>
+      </div>
+      <div id="location-map" class="map"></div>
+      <div class="map-legend" aria-hidden="true">
+        <span>Win-rate glow</span>
+        <span>Low</span>
+        <span class="legend-ramp"></span>
+        <span>High</span>
+      </div>
+    </section>
+
+  </main>
+
+  <footer class="site-footer" id="footer"></footer>
+
+  <!-- Search: guilds / bladers / roster / profile -->
+  <div id="search-modal" class="modal-overlay" data-modal role="dialog" aria-modal="true" aria-labelledby="search-title">
+    <div class="modal-card">
+      <div class="modal-header">
+        <button class="icon-btn hidden" id="search-back" aria-label="Back"><i class="fas fa-arrow-left" aria-hidden="true"></i></button>
+        <h3 class="modal-title" id="search-title">Search</h3>
+        <button class="icon-btn" data-close aria-label="Close"><i class="fas fa-xmark" aria-hidden="true"></i></button>
+      </div>
+
+      <div class="modal-body">
+        <div id="search-controls" class="modal-controls">
+          <div class="command-tabs compact" role="tablist" aria-label="Search for">
+            <button class="command-tab active" role="tab" data-search-tab="team">Guilds</button>
+            <button class="command-tab" role="tab" data-search-tab="player">Bladers</button>
+          </div>
+          <input type="search" id="search-input" class="search-input" placeholder="Search guilds or cities" autocomplete="off" aria-label="Search">
+          <div class="command-tabs compact" id="search-bracket-pills" aria-label="Bracket filter"></div>
+        </div>
+
+        <div id="search-results" class="scroll-view"></div>
+        <div id="roster-view" class="scroll-view hidden"></div>
+        <div id="profile-view" class="scroll-view hidden"></div>
+
+        <div id="share-overlay" class="share-overlay" role="dialog" aria-label="Share profile">
+          <h4>Profile card ready</h4>
+          <img id="share-image" alt="Preview of the profile card">
+          <div class="share-grid">
+            <button class="btn-primary" id="share-native"><i class="fas fa-share-nodes" aria-hidden="true"></i> Share</button>
+            <button class="btn-secondary" id="share-download"><i class="fas fa-download" aria-hidden="true"></i> Save image</button>
+          </div>
+          <button class="text-btn" id="share-cancel">Cancel</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Battle log -->
+  <div id="history-modal" class="modal-overlay" data-modal role="dialog" aria-modal="true" aria-labelledby="history-title">
+    <div class="modal-card wide">
+      <div class="modal-header">
+        <button class="icon-btn hidden" id="history-back" aria-label="Back"><i class="fas fa-arrow-left" aria-hidden="true"></i></button>
+        <h3 class="modal-title" id="history-title">Battle log</h3>
+        <button class="icon-btn" data-close aria-label="Close"><i class="fas fa-xmark" aria-hidden="true"></i></button>
+      </div>
+      <div class="modal-body">
+        <div id="history-controls" class="modal-controls">
+          <input type="search" id="history-input" class="search-input" placeholder="Search for a guild" autocomplete="off" aria-label="Search for a guild">
+          <div class="command-tabs compact" id="history-bracket-pills" aria-label="Bracket filter"></div>
+        </div>
+        <div id="history-teams" class="scroll-view"></div>
+        <div id="history-matches" class="scroll-view hidden"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Brackets -->
+  <div id="brackets-modal" class="modal-overlay" data-modal role="dialog" aria-modal="true" aria-labelledby="brackets-title">
+    <div class="modal-card auto">
+      <div class="modal-header">
+        <h3 class="modal-title" id="brackets-title"><span data-bind="seasonLabel">Season</span> brackets</h3>
+        <button class="icon-btn" data-close aria-label="Close"><i class="fas fa-xmark" aria-hidden="true"></i></button>
+      </div>
+      <div class="modal-body scroll-view padded">
+        <p class="modal-lead">Live bracket pages open in a new tab, where you can see match-ups and vote on predictions.</p>
+        <div class="bracket-grid" id="bracket-launchers"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Schedule -->
+  <div id="schedule-modal" class="modal-overlay" data-modal role="dialog" aria-modal="true" aria-labelledby="schedule-title">
+    <div class="modal-card auto">
+      <div class="modal-header">
+        <h3 class="modal-title" id="schedule-title">Schedule</h3>
+        <button class="icon-btn" data-close aria-label="Close"><i class="fas fa-xmark" aria-hidden="true"></i></button>
+      </div>
+      <div class="modal-body scroll-view">
+        <ol class="list" id="schedule-list"></ol>
+      </div>
+    </div>
+  </div>
+
+  <!-- Upload -->
+  <div id="upload-modal" class="modal-overlay" data-modal role="dialog" aria-modal="true" aria-labelledby="upload-title">
+    <div class="modal-card auto">
+      <div class="modal-header">
+        <h3 class="modal-title" id="upload-title">Upload portrait</h3>
+        <button class="icon-btn" data-close aria-label="Close"><i class="fas fa-xmark" aria-hidden="true"></i></button>
+      </div>
+      <div class="modal-body scroll-view">
+        <form class="upload-form" id="upload-form">
+          <div>
+            <label for="upload-player">Blader</label>
+            <select id="upload-player" class="form-control" required></select>
+          </div>
+          <div>
+            <label for="dropzone">Portrait</label>
+            <div class="dropzone" id="dropzone" tabindex="0" role="button">
+              <i class="fas fa-image" aria-hidden="true"></i>
+              <span>Choose a photo or drop it here</span>
+              <small>A square JPG or PNG works best</small>
+            </div>
+            <input type="file" id="upload-file" accept="image/*" hidden>
+          </div>
+          <button type="submit" class="btn-primary">Upload portrait</button>
+          <div class="form-msg" id="upload-msg" role="status"></div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <div id="tooltip" class="tooltip" role="tooltip"></div>
+  <div id="toast" class="toast" role="status"></div>
+
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.markercluster/1.5.3/leaflet.markercluster.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.heat/0.2.0/leaflet-heat.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+  <script src="js/data.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
