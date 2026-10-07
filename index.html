@@ -47,7 +47,6 @@
       <button class="nav-link" data-action="open-history"><i class="fas fa-scroll" aria-hidden="true"></i> Battle log</button>
       <button class="nav-link" data-action="open-schedule"><i class="fa-regular fa-calendar" aria-hidden="true"></i> Schedule</button>
       <button class="nav-link" data-action="open-brackets"><i class="fas fa-sitemap" aria-hidden="true"></i> Brackets</button>
-      <button class="nav-link" data-action="open-upload"><i class="fas fa-camera" aria-hidden="true"></i> Upload portrait</button>
       <a class="nav-link" id="nav-social" href="#" target="_blank" rel="noopener"><i class="fab fa-facebook" aria-hidden="true"></i> Facebook</a>
     </nav>
   </header>
@@ -66,7 +65,7 @@
         <p class="hero-status" id="hero-status">Loading the season…</p>
         <p class="hero-updated" id="update-time"></p>
       </div>
-      <img class="hero-logo" src="images/logo.webp" width="1000" height="456" alt="GUMverse by Gaming Underground Market">
+      <img class="hero-logo" src="images/ggw2-logo.webp" width="1000" height="647" alt="GGW2: GUM Guild Wars">
 
       <ol class="season-path" id="progress-container" aria-label="Season progress by week"></ol>
       <p class="season-caption" id="season-caption"></p>
@@ -121,44 +120,6 @@
             <table class="data-table">
               <thead><tr><th class="col-rank">Rank</th><th>Blader</th><th class="num" data-finish-label>Per game</th></tr></thead>
               <tbody id="weekly-finish-body"></tbody>
-            </table>
-          </div>
-        </div>
-      </div>
-    </section>
-
-    <!-- Guild standings -->
-    <section class="section" aria-labelledby="guilds-title">
-      <div class="section-head">
-        <h2 id="guilds-title" class="section-title">Guild standings</h2>
-        <p class="section-note">Ranked by match wins, then win rate, set difference and point difference. Official final results are posted on the bracket pages.</p>
-      </div>
-
-      <div class="banners" id="bracket-leaders"></div>
-
-      <div class="command-tabs" id="bracket-pills" role="tablist" aria-label="Bracket"></div>
-
-      <div class="table-pair">
-        <div class="panel">
-          <h4 class="panel-title" id="bracket-team-title">Guilds</h4>
-          <div class="table-wrap">
-            <table class="data-table">
-              <thead>
-                <tr>
-                  <th class="col-rank">Rank</th><th>Guild</th>
-                  <th class="num">W–L</th><th class="num">Win rate</th><th class="num col-diff">Sets ±</th><th class="num col-diff">Points ±</th>
-                </tr>
-              </thead>
-              <tbody id="bracket-team-body"></tbody>
-            </table>
-          </div>
-        </div>
-        <div class="panel">
-          <h4 class="panel-title" id="bracket-player-title">Bladers</h4>
-          <div class="table-wrap">
-            <table class="data-table">
-              <thead><tr><th class="col-rank">Rank</th><th>Blader</th><th class="num">MVP score</th></tr></thead>
-              <tbody id="bracket-player-body"></tbody>
             </table>
           </div>
         </div>
@@ -269,42 +230,12 @@
     </div>
   </div>
 
-  <!-- Upload -->
-  <div id="upload-modal" class="modal-overlay" data-modal role="dialog" aria-modal="true" aria-labelledby="upload-title">
-    <div class="modal-card auto">
-      <div class="modal-header">
-        <h3 class="modal-title" id="upload-title">Upload portrait</h3>
-        <button class="icon-btn" data-close aria-label="Close"><i class="fas fa-xmark" aria-hidden="true"></i></button>
-      </div>
-      <div class="modal-body scroll-view">
-        <form class="upload-form" id="upload-form">
-          <div>
-            <label for="upload-player">Blader</label>
-            <select id="upload-player" class="form-control" required></select>
-          </div>
-          <div>
-            <label for="dropzone">Portrait</label>
-            <div class="dropzone" id="dropzone" tabindex="0" role="button">
-              <i class="fas fa-image" aria-hidden="true"></i>
-              <span>Choose a photo or drop it here</span>
-              <small>A square JPG or PNG works best</small>
-            </div>
-            <input type="file" id="upload-file" accept="image/*" hidden>
-          </div>
-          <button type="submit" class="btn-primary">Upload portrait</button>
-          <div class="form-msg" id="upload-msg" role="status"></div>
-        </form>
-      </div>
-    </div>
-  </div>
-
   <div id="tooltip" class="tooltip" role="tooltip"></div>
   <div id="toast" class="toast" role="status"></div>
 
-  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.markercluster/1.5.3/leaflet.markercluster.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
-  <script src="js/data.js"></script>
-  <script src="js/app.js"></script>
+  <script defer src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script defer src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.markercluster/1.5.3/leaflet.markercluster.js"></script>
+  <script defer src="js/data.js"></script>
+  <script defer src="js/app.js"></script>
 </body>
 </html>

@@ -850,54 +850,6 @@ body.mock-mode .mock-ticker { display: flex; }
 .gain { color: var(--teal-bright); }
 .loss { color: var(--pink); }
 
-/* ---------- Bracket leader banners ---------- */
-
-.banners {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 16px;
-  margin-bottom: 40px;
-}
-
-.banner {
-  position: relative;
-  display: flex;
-  flex-direction: column;
-  min-height: 190px;
-  padding: 18px 16px 40px;
-  background: linear-gradient(180deg, rgba(14, 163, 174, 0.24), rgba(14, 163, 174, 0.1));
-  /* Pennant tail */
-  clip-path: polygon(0 0, 100% 0, 100% 100%, 50% calc(100% - 26px), 0 100%);
-  border: none;
-  text-align: left;
-  cursor: pointer;
-  transition: background var(--ease);
-}
-
-.banner::before {
-  content: "";
-  position: absolute;
-  inset: 0 0 auto;
-  height: 3px;
-  background: var(--teal);
-}
-
-.banner:hover { background: linear-gradient(180deg, rgba(255, 46, 136, 0.26), rgba(255, 46, 136, 0.05)); }
-.banner:hover::before { background: var(--pink); }
-
-.banner-bracket { color: var(--ash); font-size: var(--t-s); }
-
-.banner-name {
-  margin: 10px 0 auto;
-  font-family: var(--font-title);
-  font-size: var(--t-l);
-  line-height: 1.2;
-  overflow-wrap: anywhere;
-}
-
-.banner-record { margin-top: 14px; font-size: var(--t-s); color: var(--ash); }
-.banner-record b { color: var(--bone); font-size: var(--t-l); font-variant-numeric: tabular-nums; }
-
 /* ---------- Guild ranking ---------- */
 
 .ranking { list-style: none; margin: 0; padding: 0; border-top: 1px solid var(--line); }
@@ -1532,7 +1484,6 @@ a.bracket-launch:hover { border-color: var(--pink); background: var(--surface-ra
   .nav-link { padding: 14px 8px; border-bottom: 1px solid var(--line); border-radius: 0; font-size: var(--t-m); }
 
   .party { grid-template-columns: minmax(0, 1fr); }
-  .banners { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 
 @media (max-width: 760px) {
@@ -1559,8 +1510,9 @@ a.bracket-launch:hover { border-color: var(--pink); background: var(--surface-ra
 
   .season-caption { display: block; }
 
-  .hero { grid-template-columns: minmax(0, 1fr); }
-  .hero-logo { grid-row: 1; width: min(260px, 70vw); }
+  .hero { grid-template-columns: minmax(0, 1fr); text-align: center; }
+  .hero-logo { grid-row: 1; justify-self: center; width: min(260px, 70vw); }
+  .hero-status { margin-inline: auto; }
   .section { padding-top: 64px; }
   .section-title { font-size: var(--t-2xl); }
 
@@ -1587,17 +1539,9 @@ a.bracket-launch:hover { border-color: var(--pink); background: var(--surface-ra
   body.mock-mode { --ticker-h: 44px; }
   .mock-ticker { height: 44px; }
 
-  /* Set and point differences don't fit beside the guild name on a phone;
-     they're still shown in each guild's battle log. */
-  .data-table .col-diff { display: none; }
-
   /* Smaller map markers so phones show more of the map (they stay centred on the spot) */
   .guild-pin { width: 32px; height: 32px; border-radius: 7px; font-size: 0.7rem; }
   .guild-pin.cluster { width: 38px; height: 38px; }
-
-  .banners { gap: 10px; }
-  .banner { min-height: 160px; padding: 14px 12px 36px; }
-  .banner-name { font-size: var(--t-m); }
 
   .modal-overlay { padding: 0; }
   .modal-card, .modal-card.wide, .modal-card.auto { max-width: 100%; height: 100%; max-height: 100%; border-radius: 0; border: none; }
@@ -1615,7 +1559,7 @@ a.bracket-launch:hover { border-color: var(--pink); background: var(--surface-ra
 /* ---------- Display type (Sora) ---------- */
 
 .hero-title, .section-title, .subsection-title, .hud-brand,
-.char-name, .portrait, .title-row dt, .banner-name, .rank-row .pos, .modal-title,
+.char-name, .portrait, .title-row dt, .rank-row .pos, .modal-title,
 .profile-name, .stat-block h5, .share-overlay h4, .log-identity h2, .bracket-launch .letter {
   font-weight: 600;
   letter-spacing: -0.02em;

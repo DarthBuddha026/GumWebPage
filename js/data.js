@@ -46,6 +46,8 @@ window.LEAGUE_CONFIG = {
     { name: "Knights", colors: ["#9E1B32", "#9AA0A6"], bracket: "A", location: "Batangas City", address: "Golden Country Homes, 15 Mars Street, Batangas City, 4200 Batangas", lat: 13.785969, lng: 121.073925, logo: "" },
     // Approximate: Parkway Square isn't on OpenStreetMap yet, so this is Lipa city centre.
     { name: "Wyverns", colors: ["#E53935"], bracket: "A", location: "Lipa City", address: "Parkway Square, Lipa City, Batangas", lat: 13.941648, lng: 121.138073, logo: "" },
+    // Street-level: the highway through San Roque (OpenStreetMap doesn't list house number 20).
+    { name: "Syndicates", colors: ["#000000", "#2D6BFF"], bracket: "A", location: "Santo Tomas", address: "20 Pan-Philippine Hwy, San Roque, Santo Tomas, 4232 Batangas", lat: 14.097774, lng: 121.147664, logo: "" },
   ],
 
   // Points awarded per finish type.
@@ -131,6 +133,9 @@ window.LEAGUE_CONFIG = {
     }
     return rounds;
   }
+
+  // Shared with the league admin (schedule generator).
+  window.leagueTools = { roundRobin };
 
   window.generateMockData = function (seed = 7) {
     const rand = mulberry32(seed);

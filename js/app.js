@@ -7,7 +7,7 @@
 
   const CFG = window.LEAGUE_CONFIG;
   const BRACKETS = Object.keys(CFG.brackets);
-  // With one bracket, bracket labels, filters and leader banners add nothing.
+  // With one bracket, bracket labels and filters add nothing.
   const SINGLE_BRACKET = BRACKETS.length === 1;
   const inBracket = (b) => (SINGLE_BRACKET ? "" : `, bracket ${esc(b)}`);
   const FINISHES = {
@@ -16,7 +16,6 @@
     burst: { label: "Burst", long: "Burst finish", color: "var(--f-burst)" },
     extreme: { label: "Extreme", long: "Extreme finish", color: "var(--f-extreme)" },
   };
-  const PHOTO_STORE_KEY = "gum-guild-wars-portraits";
 
   const state = {
     raw: null,
@@ -27,7 +26,6 @@
     league: [], // qualified bladers sorted by MVP tie-break
     currentWeek: null,
     finish: "spin",
-    bracket: BRACKETS[0],
     search: { tab: "team", bracket: "ALL", stack: [] },
     history: { bracket: "ALL" },
     map: null,
@@ -63,26 +61,8 @@
     return h;
   }
 
-  function readPhotos() {
-    try {
-      return JSON.parse(localStorage.getItem(PHOTO_STORE_KEY) || "{}");
-    } catch {
-      return {};
-    }
-  }
-
-  function savePhoto(key, dataUrl) {
-    try {
-      const photos = readPhotos();
-      photos[key] = dataUrl;
-      localStorage.setItem(PHOTO_STORE_KEY, JSON.stringify(photos));
-      return true;
-    } catch {
-      return false;
-    }
-  }
-
-  const playerPhoto = (p) => readPhotos()[p.key] || p.photo || "";
+  // Photos are uploaded by organizers in the admin (/admin).
+  const playerPhoto = (p) => p.photo || "";
 
   // Guild colours from the data: `colors: [fill, border]` (border defaults to the fill).
   const HEX = /^#([0-9a-f]{3}|[0-9a-f]{6})$/i;
@@ -152,7 +132,62 @@
       if (!res.ok) throw new Error(`The data request failed with status ${res.status}. Check dataUrl in js/data.js.`);
       return res.json();
     }
+    const league = await fetchLeague();
+    if (league?.guilds?.length) CFG.teams = league.guilds;
+    if (league && league.season.matches.length && league.players.length) return leagueToRaw(league);
     return window.generateMockData();
+  }
+
+  // Everything saved in the admin (/admin). Returns null when the API isn't
+  // available (e.g. a plain file server), so the dashboard falls back to sample data.
+  async function fetchLeague() {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 5000);
+    try {
+      const res = await fetch("/api/league", { signal: controller.signal });
+      if (!res.ok) return null;
+      return await res.json();
+    } catch {
+      return null;
+    } finally {
+      clearTimeout(timer);
+    }
+  }
+
+  // Converts the admin's data into the shape buildModel() uses. Only finished
+  // matches count: battles still in progress don't affect any stats.
+  function leagueToRaw(league) {
+    const { season, results } = league;
+    CFG.season = season.number || CFG.season;
+    if (season.venue) CFG.venue = season.venue;
+
+    const bracketOf = new Map((league.guilds || CFG.teams).map((t) => [t.name, t.bracket || "A"]));
+    const weekLabel = new Map(season.weeks.map((w) => [w.id, w.label]));
+    const matches = season.matches.map((m) => {
+      const r = results[m.id];
+      const base = { id: m.id, week: weekLabel.get(m.weekId), bracket: bracketOf.get(m.team1) || "A", team1: m.team1, team2: m.team2, bouts: [] };
+      if (r?.status === "final") base.bouts = r.bouts.map(({ p1, p2, p1Pts, p2Pts, rounds }) => ({ p1, p2, p1Pts, p2Pts, rounds }));
+      if (r?.status === "default") base.defaultWinner = r.defaultWinner === 1 ? m.team1 : m.team2;
+      return base;
+    });
+
+    const weeks = season.weeks
+      .map((w, i) => ({ w, i }))
+      .sort((a, b) => (a.w.date || "9999").localeCompare(b.w.date || "9999") || a.i - b.i)
+      .map(({ w }) => {
+        const inWeek = matches.filter((m) => m.week === w.label);
+        const done = inWeek.filter((m) => m.bouts.length || m.defaultWinner).length;
+        return { label: w.label, date: w.date, progress: inWeek.length ? Math.round((done / inWeek.length) * 100) : 0 };
+      });
+
+    return {
+      mock: false,
+      updatedAt: league.updatedAt,
+      weeks,
+      teams: league.guilds || CFG.teams,
+      players: league.players.map((p) => ({ ...p, achievements: p.achievements || [] })),
+      matches,
+    };
   }
 
   function emptyLine() {
@@ -221,9 +256,23 @@
     const playersByKey = new Map(players.map((p) => [p.key, p]));
 
     raw.matches.forEach((m) => {
-      if (!m.bouts || !m.bouts.length) return;
       const t1 = teamsByName.get(m.team1);
       const t2 = teamsByName.get(m.team2);
+
+      // Default/DQ wins count for the guilds' records only, not for blader stats.
+      if (m.defaultWinner) {
+        const winner1 = m.defaultWinner === m.team1;
+        m.result = { bouts1: 0, bouts2: 0, pts1: 0, pts2: 0, winner: m.defaultWinner, byDefault: true };
+        [[t1, winner1], [t2, !winner1]].forEach(([t, won]) => {
+          if (!t) return;
+          t.played++;
+          if (won) t.wins++;
+          else t.losses++;
+        });
+        return;
+      }
+
+      if (!m.bouts || !m.bouts.length) return;
       let b1 = 0;
       let b2 = 0;
       let pts1 = 0;
@@ -327,7 +376,6 @@
     $("#finish-pills").innerHTML = Object.entries(FINISHES)
       .map(([f, info]) => `<button class="command-tab" role="tab" data-finish="${f}"><span class="swatch" style="--sw:${info.color}"></span>${esc(info.long)}</button>`)
       .join("");
-    $("#bracket-pills").innerHTML = BRACKETS.map((b) => `<button class="command-tab" role="tab" data-bracket="${esc(b)}">Bracket ${esc(b)}</button>`).join("");
 
     const filterPills = ["ALL", ...BRACKETS]
       .map((b) => `<button class="command-tab" data-bracket="${esc(b)}">${b === "ALL" ? "All brackets" : `Bracket ${esc(b)}`}</button>`)
@@ -337,7 +385,7 @@
     setActiveTab($("#search-bracket-pills"), "ALL");
     setActiveTab($("#history-bracket-pills"), "ALL");
     if (SINGLE_BRACKET) {
-      ["#bracket-pills", "#bracket-leaders", "#search-bracket-pills", "#history-bracket-pills"].forEach((s) => $(s).classList.add("hidden"));
+      ["#search-bracket-pills", "#history-bracket-pills"].forEach((s) => $(s).classList.add("hidden"));
     }
 
     $("#bracket-launchers").innerHTML = BRACKETS.map((b) => {
@@ -383,7 +431,7 @@
 
   function renderHero() {
     const weeks = state.raw.weeks || [];
-    const played = state.raw.matches.filter((m) => m.bouts?.length).length;
+    const played = state.raw.matches.filter((m) => m.bouts?.length || m.defaultWinner).length;
     const total = state.raw.matches.length;
     const withGames = state.players.filter((p) => p.overall.games);
     const avgPPG = withGames.length ? withGames.reduce((s, p) => s + p.overall.ppg, 0) / withGames.length : 0;
@@ -580,53 +628,6 @@
     $("#weekly-finish-body").innerHTML = playerRows(weekly, (p) => fmt2(p.weekly[field]), `No battles recorded in ${state.currentWeek} yet.`);
   }
 
-  function renderBracketLeaders() {
-    $("#bracket-leaders").innerHTML = BRACKETS.map((b) => {
-      const leader = state.teams.find((t) => t.bracket === b);
-      if (!leader) {
-        return `<div class="banner" style="cursor:default"><span class="banner-bracket">Bracket ${esc(b)} leader</span><span class="banner-name">Unclaimed</span></div>`;
-      }
-      return `
-        <button class="banner" data-open-team="${esc(leader.name)}">
-          <span class="banner-bracket">Bracket ${esc(b)} leader</span>
-          <span class="banner-name">${esc(leader.name)}</span>
-          <span class="banner-record"><b>${record(leader.wins, leader.losses)}</b> record, <b>${pct(leader.winRate)}</b> win rate</span>
-        </button>`;
-    }).join("");
-  }
-
-  function renderBracketTables() {
-    const b = state.bracket;
-    setActiveTab($("#bracket-pills"), b);
-    $("#bracket-team-title").textContent = SINGLE_BRACKET ? "Guilds" : `Guilds in bracket ${b}`;
-    $("#bracket-player-title").textContent = SINGLE_BRACKET ? "Bladers" : `Bladers in bracket ${b}`;
-
-    const teams = state.teams.filter((t) => t.bracket === b);
-    $("#bracket-team-body").innerHTML = teams.length
-      ? teams
-          .map(
-            (t, i) => `
-          <tr data-open-team="${esc(t.name)}">
-            ${rankCell(i)}
-            <td>
-              <div class="name-cell">
-                ${teamAvatar(t)}
-                <div class="stack"><span class="primary">${esc(t.name)}</span><span class="secondary">${esc(t.location)}</span></div>
-              </div>
-            </td>
-            <td class="num">${record(t.wins, t.losses)}</td>
-            <td class="num strong">${pct(t.winRate)}</td>
-            <td class="num col-diff ${signClass(t.setDiff)}">${signed(t.setDiff)}</td>
-            <td class="num col-diff ${signClass(t.ptDiff)}">${signed(t.ptDiff)}</td>
-          </tr>`
-          )
-          .join("")
-      : `<tr><td colspan="6" class="empty">No guilds in this bracket yet.</td></tr>`;
-
-    const players = state.league.filter((p) => p.bracket === b).slice(0, 30);
-    $("#bracket-player-body").innerHTML = playerRows(players, (p) => fmt2(p.mvp), "No qualified bladers in this bracket yet.");
-  }
-
   function wrMeter(wr) {
     const above = wr >= 0.5;
     const left = above ? 50 : wr * 100;
@@ -646,7 +647,7 @@
             ${teamAvatar(t)}
             <div class="guild">
               <div class="guild-name">${esc(t.name)}</div>
-              <div class="guild-meta"><span>${esc(t.location)}</span>${SINGLE_BRACKET ? "" : `<span>Bracket ${esc(t.bracket)}</span>`}<span>${t.points} points</span></div>
+              <div class="guild-meta">${SINGLE_BRACKET ? "" : `<span>Bracket ${esc(t.bracket)}</span>`}<span>${t.points} points</span></div>
             </div>
             <span class="record"><b>${record(t.wins, t.losses)}</b></span>
             ${wrMeter(t.winRate)}
@@ -740,8 +741,6 @@
     renderTitles();
     renderMeta();
     renderFinishTables();
-    renderBracketLeaders();
-    renderBracketTables();
     renderRanking();
     renderMap();
   }
@@ -918,7 +917,7 @@
           <div><b>${t.points}</b><span>Points</span></div>
         </div>
         <div class="roster-meta">
-          <p>${esc(t.location)}, ${plural(roster.length, "blader")}</p>
+          <p>${t.location ? `${esc(t.location)}, ` : ""}${plural(roster.length, "blader")}</p>
           <button class="btn-secondary" data-history-team="${esc(t.name)}"><i class="fas fa-scroll" aria-hidden="true"></i> Battle log</button>
         </div>
         ${roster.map(bladerCard).join("") || emptyState("fa-user-slash", "No bladers on this guild", "Bladers appear here once they're registered.")}
@@ -1004,13 +1003,37 @@
 
   // ----- Profile sharing -----
 
+  // html2canvas is only needed for sharing, so it's fetched on first use instead of on page load.
+  const HTML2CANVAS_URL = "https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js";
+  let html2canvasLoading = null;
+
+  function loadHtml2canvas() {
+    if (window.html2canvas) return Promise.resolve();
+    html2canvasLoading ??= new Promise((resolve, reject) => {
+      const script = document.createElement("script");
+      script.src = HTML2CANVAS_URL;
+      script.onload = resolve;
+      script.onerror = () => {
+        html2canvasLoading = null;
+        script.remove();
+        reject(new Error("html2canvas failed to load"));
+      };
+      document.head.append(script);
+    });
+    return html2canvasLoading;
+  }
+
   async function shareProfile() {
     const target = $("#profile-capture");
-    if (!target || !window.html2canvas) {
-      toast("Sharing isn't available right now. Reload the page and try again.");
+    if (!target) return;
+    toast("Making the profile card…");
+    try {
+      await loadHtml2canvas();
+    } catch (err) {
+      console.error(err);
+      toast("Sharing isn't available right now. Check your connection and try again.");
       return;
     }
-    toast("Making the profile card…");
     try {
       const canvas = await html2canvas(target, { backgroundColor: "#000000", scale: 2, useCORS: true });
       state.shareBlob = await new Promise((resolve) => canvas.toBlob(resolve, "image/png"));
@@ -1223,104 +1246,6 @@
     $(".encounter-head", el)?.setAttribute("aria-expanded", expand);
   }
 
-  // ----- Upload -----
-
-  function initUpload() {
-    const select = $("#upload-player");
-    select.innerHTML =
-      `<option value="">Choose a blader</option>` +
-      state.players
-        .slice()
-        .sort((a, b) => a.name.localeCompare(b.name))
-        .map((p) => `<option value="${esc(p.key)}">${esc(p.name)} (${esc(p.team)}, ${esc(p.key)})</option>`)
-        .join("");
-
-    const zone = $("#dropzone");
-    const input = $("#upload-file");
-    let resized = null;
-
-    const showMsg = (text, ok) => {
-      const el = $("#upload-msg");
-      el.textContent = text;
-      el.className = `form-msg ${ok ? "ok" : "err"}`;
-    };
-
-    async function handleFile(file) {
-      if (!file || !file.type.startsWith("image/")) {
-        showMsg("That file isn't an image. Choose a JPG or PNG.", false);
-        return;
-      }
-      resized = await resizeImage(file, 320);
-      zone.innerHTML = `<img src="${resized}" alt="Portrait preview"><span>Choose a different photo</span>`;
-      showMsg("", true);
-    }
-
-    zone.addEventListener("click", () => input.click());
-    zone.addEventListener("keydown", (e) => {
-      if (e.key === "Enter" || e.key === " ") {
-        e.preventDefault();
-        input.click();
-      }
-    });
-    input.addEventListener("change", () => handleFile(input.files[0]));
-    zone.addEventListener("dragover", (e) => {
-      e.preventDefault();
-      zone.classList.add("drag");
-    });
-    zone.addEventListener("dragleave", () => zone.classList.remove("drag"));
-    zone.addEventListener("drop", (e) => {
-      e.preventDefault();
-      zone.classList.remove("drag");
-      handleFile(e.dataTransfer.files[0]);
-    });
-
-    $("#upload-form").addEventListener("submit", async (e) => {
-      e.preventDefault();
-      const key = select.value;
-      if (!key) return showMsg("Choose a blader first.", false);
-      if (!resized) return showMsg("Choose a photo to upload.", false);
-
-      if (CFG.uploadUrl) {
-        try {
-          const body = new FormData();
-          body.append("playerKey", key);
-          body.append("photo", await (await fetch(resized)).blob(), `${key}.jpg`);
-          const res = await fetch(CFG.uploadUrl, { method: "POST", body });
-          if (!res.ok) throw new Error(res.status);
-          showMsg("Portrait uploaded. It appears once an organiser approves it.", true);
-        } catch {
-          showMsg("Upload failed. Check your connection and try again.", false);
-        }
-        return;
-      }
-
-      if (savePhoto(key, resized)) {
-        showMsg("Portrait uploaded. It shows on this blader's profile in this browser.", true);
-        renderTopBladers();
-        renderFinishTables();
-        renderBracketTables();
-      } else {
-        showMsg("This browser blocked saving the portrait. Allow site storage and try again.", false);
-      }
-    });
-  }
-
-  function resizeImage(file, size) {
-    return new Promise((resolve, reject) => {
-      const img = new Image();
-      img.onload = () => {
-        const canvas = document.createElement("canvas");
-        canvas.width = canvas.height = size;
-        const s = Math.min(img.width, img.height);
-        canvas.getContext("2d").drawImage(img, (img.width - s) / 2, (img.height - s) / 2, s, s, 0, 0, size, size);
-        URL.revokeObjectURL(img.src);
-        resolve(canvas.toDataURL("image/jpeg", 0.85));
-      };
-      img.onerror = reject;
-      img.src = URL.createObjectURL(file);
-    });
-  }
-
   // ---------------------------------------------------------------------------
   // Tooltip (hover layer for the finish bar and win-rate meters)
   // ---------------------------------------------------------------------------
@@ -1358,13 +1283,6 @@
       if (!tab) return;
       state.finish = tab.dataset.finish;
       renderFinishTables();
-    });
-
-    $("#bracket-pills").addEventListener("click", (e) => {
-      const tab = e.target.closest("[data-bracket]");
-      if (!tab) return;
-      state.bracket = tab.dataset.bracket;
-      renderBracketTables();
     });
 
     $("#search-bracket-pills").addEventListener("click", (e) => {
@@ -1408,7 +1326,7 @@
       else closeMobileMenu();
     });
 
-    // Rows, cards and banners that open something are keyboard reachable.
+    // Rows and cards that open something are keyboard reachable.
     document.addEventListener("keydown", (e) => {
       if (e.key !== "Enter" && e.key !== " ") return;
       const el = e.target.closest("[data-open-player]:not(button), [data-open-team]:not(button), [data-history-team]:not(button)");
@@ -1425,7 +1343,6 @@
         switch (action.dataset.action) {
           case "open-search": return openSearch();
           case "open-history": return openHistory();
-          case "open-upload": return openModal("upload-modal");
           case "open-schedule": return openModal("schedule-modal");
           case "open-brackets": return openModal("brackets-modal");
           case "share-profile": return shareProfile();
@@ -1477,7 +1394,7 @@
   // ---------------------------------------------------------------------------
 
   // Keep the loading screen up long enough to read, even when data is instant.
-  const MIN_LOADER_MS = 1500;
+  const MIN_LOADER_MS = 600;
   const bootStart = performance.now();
 
   function hideLoader() {
@@ -1491,15 +1408,15 @@
   }
 
   async function init() {
-    applyBranding();
     bindEvents();
     bindTooltip();
     try {
       const raw = await loadData();
+      // After loading, so the season number and venue from the admin are used.
+      applyBranding();
       buildModel(raw);
       document.body.classList.toggle("mock-mode", !!raw.mock);
       renderDashboard();
-      initUpload();
       makeRowsFocusable();
       new MutationObserver(makeRowsFocusable).observe(document.body, { childList: true, subtree: true });
       hideLoader();

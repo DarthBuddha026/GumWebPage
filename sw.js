@@ -1,6 +1,6 @@
 // Network-first service worker: always try fresh data, fall back to cache offline.
-const CACHE = "gum-guild-wars-v3";
-const SHELL = ["./", "index.html", "css/styles.css", "js/data.js", "js/app.js", "manifest.json", "images/logo.webp", "images/logo-mark.webp"];
+const CACHE = "gum-guild-wars-v4";
+const SHELL = ["./", "index.html", "css/styles.css", "js/data.js", "js/app.js", "manifest.json", "images/logo.webp", "images/logo-mark.webp", "images/ggw2-logo.webp"];
 
 self.addEventListener("install", (event) => {
   event.waitUntil(caches.open(CACHE).then((cache) => cache.addAll(SHELL)));
@@ -15,7 +15,8 @@ self.addEventListener("activate", (event) => {
 });
 
 self.addEventListener("fetch", (event) => {
-  if (event.request.method !== "GET") return;
+  // Leave the API alone so admin changes and sessions are never served from cache.
+  if (event.request.method !== "GET" || new URL(event.request.url).pathname.startsWith("/api/")) return;
   event.respondWith(
     fetch(event.request)
       .then((res) => {
