@@ -22,6 +22,9 @@ window.LEAGUE_CONFIG = {
 
   // null → use generated mock data. Otherwise a URL returning the raw dataset.
   dataUrl: null,
+  // The league admin's API (a separate deployment). Guilds, bladers, the schedule and
+  // results come from here; null or unreachable → sample data.
+  leagueUrl: "https://gum-guildwars-admin.vercel.app/api/league",
   // null → uploads are saved in this browser only. Otherwise a URL that accepts
   // a multipart POST with fields `playerKey` and `photo`.
   uploadUrl: null,

@@ -61,7 +61,7 @@
     return h;
   }
 
-  // Photos are uploaded by organizers in the admin (/admin).
+  // Photos are uploaded by organizers in the league admin (CFG.leagueUrl).
   const playerPhoto = (p) => p.photo || "";
 
   // Guild colours from the data: `colors: [fill, border]` (border defaults to the fill).
@@ -138,15 +138,21 @@
     return window.generateMockData();
   }
 
-  // Everything saved in the admin (/admin). Returns null when the API isn't
-  // available (e.g. a plain file server), so the dashboard falls back to sample data.
+  // Everything saved in the league admin (CFG.leagueUrl). Returns null when it isn't
+  // set or can't be reached, so the dashboard falls back to sample data.
   async function fetchLeague() {
+    if (!CFG.leagueUrl) return null;
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), 5000);
     try {
-      const res = await fetch("/api/league", { signal: controller.signal });
+      const res = await fetch(CFG.leagueUrl, { signal: controller.signal });
       if (!res.ok) return null;
-      return await res.json();
+      const league = await res.json();
+      // Uploaded logos and photos are /api/image paths on the admin's deployment.
+      const fromAdmin = (ref) => (ref && ref.startsWith("/api/") ? new URL(ref, CFG.leagueUrl).href : ref);
+      league.guilds = league.guilds && league.guilds.map((g) => ({ ...g, logo: fromAdmin(g.logo) }));
+      league.players = league.players.map((p) => ({ ...p, photo: fromAdmin(p.photo) }));
+      return league;
     } catch {
       return null;
     } finally {
