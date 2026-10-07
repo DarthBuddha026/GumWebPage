@@ -127,37 +127,35 @@
   // ---------------------------------------------------------------------------
 
   async function loadData() {
-    if (CFG.dataUrl) {
-      const res = await fetch(CFG.dataUrl, { cache: "no-store" });
-      if (!res.ok) throw new Error(`The data request failed with status ${res.status}. Check dataUrl in js/data.js.`);
-      return res.json();
-    }
-    const league = await fetchLeague();
-    if (league?.guilds?.length) CFG.teams = league.guilds;
-    if (league && league.season.matches.length && league.players.length) return leagueToRaw(league);
-    return window.generateMockData();
+    return leagueToRaw(await fetchLeague());
   }
 
-  // Everything saved in the league admin (CFG.leagueUrl). Returns null when it isn't
-  // set or can't be reached, so the dashboard falls back to sample data.
+  // Everything saved in the league admin (CFG.leagueUrl). Retries once, since the
+  // admin's API can be slow or briefly unavailable on a cold start.
   async function fetchLeague() {
-    if (!CFG.leagueUrl) return null;
-    const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), 5000);
-    try {
-      const res = await fetch(CFG.leagueUrl, { signal: controller.signal });
-      if (!res.ok) return null;
-      const league = await res.json();
-      // Uploaded logos and photos are /api/image paths on the admin's deployment.
-      const fromAdmin = (ref) => (ref && ref.startsWith("/api/") ? new URL(ref, CFG.leagueUrl).href : ref);
-      league.guilds = league.guilds && league.guilds.map((g) => ({ ...g, logo: fromAdmin(g.logo) }));
-      league.players = league.players.map((p) => ({ ...p, photo: fromAdmin(p.photo) }));
-      return league;
-    } catch {
-      return null;
-    } finally {
-      clearTimeout(timer);
+    if (!CFG.leagueUrl) throw new Error("No league data source is set. Add leagueUrl in js/data.js.");
+    let lastError;
+    for (let attempt = 0; attempt < 2; attempt++) {
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), 10000);
+      try {
+        const res = await fetch(CFG.leagueUrl, { cache: "no-store", signal: controller.signal });
+        if (!res.ok) throw new Error(`The league data request failed with status ${res.status}.`);
+        const league = await res.json();
+        // Uploaded logos and photos are /api/image paths on the admin's deployment.
+        const fromAdmin = (ref) => (ref && ref.startsWith("/api/") ? new URL(ref, CFG.leagueUrl).href : ref);
+        league.guilds = (league.guilds || []).map((g) => ({ ...g, logo: fromAdmin(g.logo) }));
+        league.players = (league.players || []).map((p) => ({ ...p, photo: fromAdmin(p.photo) }));
+        league.season = { weeks: [], matches: [], ...league.season };
+        league.results = league.results || {};
+        return league;
+      } catch (err) {
+        lastError = err.name === "AbortError" ? new Error("The league data took too long to load.") : err;
+      } finally {
+        clearTimeout(timer);
+      }
     }
+    throw new Error(`${lastError.message} Please try again in a moment.`);
   }
 
   // Converts the admin's data into the shape buildModel() uses. Only finished
@@ -167,7 +165,7 @@
     CFG.season = season.number || CFG.season;
     if (season.venue) CFG.venue = season.venue;
 
-    const bracketOf = new Map((league.guilds || CFG.teams).map((t) => [t.name, t.bracket || "A"]));
+    const bracketOf = new Map(league.guilds.map((t) => [t.name, t.bracket || "A"]));
     const weekLabel = new Map(season.weeks.map((w) => [w.id, w.label]));
     const matches = season.matches.map((m) => {
       const r = results[m.id];
@@ -187,10 +185,9 @@
       });
 
     return {
-      mock: false,
       updatedAt: league.updatedAt,
       weeks,
-      teams: league.guilds || CFG.teams,
+      teams: league.guilds,
       players: league.players.map((p) => ({ ...p, achievements: p.achievements || [] })),
       matches,
     };
@@ -448,7 +445,12 @@
         ? `${current.label} is complete.`
         : `${current.label} is underway.`;
 
-    $("#hero-status").textContent = `Season ${CFG.season}. ${weekText} ${played} of ${total} guild matches are done, and bladers average ${fmt2(avgPPG)} points a game.`;
+    const progressText = !total
+      ? "The schedule hasn't been posted yet."
+      : !played
+        ? `${plural(total, "guild match", "guild matches")} on the schedule.`
+        : `${played} of ${total} guild matches are done, and bladers average ${fmt2(avgPPG)} points a game.`;
+    $("#hero-status").textContent = `Season ${CFG.season}. ${weekText} ${progressText}`;
 
     const updated = state.raw.updatedAt ? new Date(state.raw.updatedAt) : new Date();
     setText("update-time", `Standings updated ${updated.toLocaleString([], { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })}`);
@@ -472,7 +474,8 @@
     const liveIdx = weeks.findIndex((w) => w.label === state.currentWeek && w.progress > 0 && w.progress < 100);
     const nextWeek = weeks.find((w) => !(w.progress > 0));
     let caption;
-    if (liveIdx >= 0) caption = `${weeks[liveIdx].label} of ${weeks.length} is ${weeks[liveIdx].progress}% played.`;
+    if (!weeks.length) caption = "";
+    else if (liveIdx >= 0) caption = `${weeks[liveIdx].label} of ${weeks.length} is ${weeks[liveIdx].progress}% played.`;
     else if (!nextWeek) caption = `All ${weeks.length} weeks are complete.`;
     else caption = "";
     if (nextWeek) caption += ` ${nextWeek.label} starts ${shortDate(nextWeek.date)}.`;
@@ -1420,7 +1423,6 @@
       // After loading, so the season number and venue from the admin are used.
       applyBranding();
       buildModel(raw);
-      document.body.classList.toggle("mock-mode", !!raw.mock);
       renderDashboard();
       makeRowsFocusable();
       new MutationObserver(makeRowsFocusable).observe(document.body, { childList: true, subtree: true });

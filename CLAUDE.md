@@ -22,17 +22,16 @@ Third-party libraries load from CDNs: Leaflet and markercluster (unpkg/cdnjs), F
 
 The scripts load in order with `defer`. Each file is an IIFE that communicates through `window` globals:
 
-- **`js/data.js`** holds `window.LEAGUE_CONFIG`, which is all the site configuration: branding, the guild list with colors, map coordinates and brackets, scoring rules (`finishPoints`, `pointsToWin`), eligibility thresholds (`minGames`, `eligibilityAttendance`) and the data source URLs. It also defines `window.generateMockData()`, a deterministic seeded generator for sample data, and `window.leagueTools.roundRobin`.
+- **`js/data.js`** holds `window.LEAGUE_CONFIG`: branding, bracket links, scoring rules (`finishPoints`, `pointsToWin`), eligibility thresholds (`minGames`, `eligibilityAttendance`), the map's default view and `leagueUrl`. It holds no league data.
 - **`js/app.js`** contains all the app logic in one closure, built around a single `state` object. Its pipeline is `init → loadData → applyBranding → buildModel → renderDashboard`.
 
-### Data sources (`loadData` in app.js)
+### Data source
 
-`loadData` checks these in priority order:
-1. `CFG.dataUrl`: if set, it fetches a raw dataset that has the same shape as `generateMockData()`'s return value.
-2. `CFG.leagueUrl` (the admin's `/api/league`): fetched with a 5s timeout. Guilds from this source replace `CFG.teams`. `leagueToRaw()` converts the admin's `{season, results, guilds, players}` into the raw shape. Only matches with `status: "final"` (bouts) or `"default"` (forfeit winner) count. Image refs that start with `/api/` are rewritten to absolute URLs on the admin's domain.
-3. Fallback: `generateMockData()`. The raw data then has `mock: true`, which adds the `mock-mode` body class and shows the "Sample data" ticker.
+All league data (guilds, bladers, the schedule and results) comes from the admin's `/api/league` (`CFG.leagueUrl`). The site has no sample or fallback data. `fetchLeague()` tries twice with a 10s timeout each; if both fail, the loader shows an error. The API sends `Access-Control-Allow-Origin: *`, so opening `index.html` from disk also works for a quick check.
 
-The **raw shape** that every source must produce is `{ mock, updatedAt, weeks: [{label, date, progress}], teams, players, matches: [{id, week, bracket, team1, team2, bouts: [{p1, p2, p1Pts, p2Pts, rounds: [{winner, finish}]}], defaultWinner?}] }`. `buildModel()` derives all stats from this shape: per-player `overall`/`weekly` stat lines, MVP score, qualification, and team records. Anything you change in the shape has to be reflected in all three producers.
+`leagueToRaw()` converts the admin's `{season, results, guilds, players}` into the raw shape that `buildModel()` uses. Only matches with `status: "final"` (bouts) or `"default"` (forfeit winner) count. Image refs that start with `/api/` are rewritten to absolute URLs on the admin's domain.
+
+The **raw shape** is `{ updatedAt, weeks: [{label, date, progress}], teams, players, matches: [{id, week, bracket, team1, team2, bouts: [{p1, p2, p1Pts, p2Pts, rounds: [{winner, finish}]}], defaultWinner?}] }`. `buildModel()` derives all stats from it: per-player `overall`/`weekly` stat lines, MVP score, qualification, and team records. Every render function has to cope with an empty season (guilds but no bladers, weeks or matches).
 
 ### Domain rules (in app.js)
 - The finish types are `spin` (shown as "Stamina"), `over`, `burst` and `extreme`. The `FINISHES` map at the top of app.js and the `--f-*` CSS variables must stay in sync with `CFG.finishPoints`.

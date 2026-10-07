@@ -36,7 +36,6 @@
   --t-4xl: 3.052rem;
 
   --hud-h: 64px;
-  --ticker-h: 0px;
   --bevel-lg: 18px;
   --bevel-sm: 8px;
   --gutter: clamp(16px, 4vw, 40px);
@@ -62,13 +61,12 @@ body {
   line-height: 1.5;
   background: var(--black);
   color: var(--bone);
-  padding-top: calc(var(--hud-h) + var(--ticker-h));
+  padding-top: var(--hud-h);
   -webkit-tap-highlight-color: transparent;
   overflow-x: hidden;
 }
 
 body.scroll-locked { overflow: hidden; }
-body.mock-mode { --ticker-h: 34px; }
 
 button, input, select { font: inherit; color: inherit; }
 a { color: inherit; }
@@ -317,28 +315,6 @@ a { color: inherit; }
 .menu-toggle.is-active .bar:nth-child(2) { opacity: 0; }
 .menu-toggle.is-active .bar:nth-child(3) { transform: translateY(-7px) rotate(-45deg); }
 
-.mock-ticker {
-  display: none;
-  position: fixed;
-  top: var(--hud-h);
-  left: 0;
-  width: 100%;
-  height: 34px;
-  z-index: 990;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  padding: 0 16px;
-  background: repeating-linear-gradient(-45deg, rgba(255, 46, 136, 0.14) 0 10px, rgba(255, 46, 136, 0.06) 10px 20px), var(--black);
-  border-bottom: 1px solid rgba(255, 46, 136, 0.4);
-  color: var(--bone);
-  font-size: var(--t-xs);
-  text-align: center;
-}
-
-.mock-ticker i { color: var(--pink); }
-body.mock-mode .mock-ticker { display: flex; }
-
 /* ---------- Page layout ---------- */
 
 .dashboard {
@@ -531,7 +507,7 @@ body.mock-mode .mock-ticker { display: flex; }
 }
 
 @media (min-width: 1081px) {
-  .char-sheet { position: sticky; top: calc(var(--hud-h) + var(--ticker-h) + 16px); }
+  .char-sheet { position: sticky; top: calc(var(--hud-h) + 16px); }
 }
 
 .char-sheet:hover {
@@ -1535,8 +1511,6 @@ a.bracket-launch:hover { border-color: var(--pink); background: var(--surface-ra
   :root { --hud-h: 56px; }
   .hud-brand { font-size: var(--t-m); }
   .hud-logo { height: 30px; }
-  body.mock-mode { --ticker-h: 44px; }
-  .mock-ticker { height: 44px; }
 
   /* Smaller map markers so phones show more of the map (they stay centred on the spot) */
   .guild-pin { width: 32px; height: 32px; border-radius: 7px; font-size: 0.7rem; }
