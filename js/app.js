@@ -667,6 +667,11 @@
 
   function renderRanking() {
     const top = state.teams.slice(0, 10);
+    const leaders = new Map(state.players.filter((p) => p.guildRole === "leader").map((p) => [p.team, p]));
+    const leaderMeta = (t) => {
+      const p = leaders.get(t.name);
+      return p ? `<span class="guild-leader"><i class="fas ${GUILD_ROLES.leader.icon}" aria-hidden="true"></i> Led by ${esc(p.name)}</span>` : "";
+    };
     $("#team-leaderboard").innerHTML = top.length
       ? top
           .map(
@@ -676,7 +681,7 @@
             ${teamAvatar(t)}
             <div class="guild">
               <div class="guild-name">${esc(t.name)}</div>
-              <div class="guild-meta">${SINGLE_BRACKET ? "" : `<span>Bracket ${esc(t.bracket)}</span>`}<span>${t.points} points</span></div>
+              <div class="guild-meta">${leaderMeta(t)}${SINGLE_BRACKET ? "" : `<span>Bracket ${esc(t.bracket)}</span>`}<span>${t.points} points</span></div>
             </div>
             <span class="record"><b>${record(t.wins, t.losses)}</b></span>
             ${wrMeter(t.winRate)}

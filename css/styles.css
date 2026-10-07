@@ -857,6 +857,7 @@ a { color: inherit; }
 .rank-row .guild-name { font-weight: 600; font-size: var(--t-l); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .rank-row .guild-meta { color: var(--ash); font-size: var(--t-xs); display: flex; flex-wrap: wrap; gap: 0 10px; }
 .rank-row .guild-meta span { white-space: nowrap; }
+.rank-row .guild-meta .guild-leader { color: var(--teal); }
 .rank-row .record { font-variant-numeric: tabular-nums; color: var(--ash); font-size: var(--t-s); }
 .rank-row .record b { color: var(--bone); font-size: var(--t-l); }
 .rank-row .wr { text-align: right; font-weight: 700; font-variant-numeric: tabular-nums; }
