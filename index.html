@@ -9,6 +9,8 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <title>GUM Guild Wars</title>
   <link rel="manifest" href="manifest.json">
+  <link rel="icon" type="image/png" href="images/icon-192.png">
+  <link rel="apple-touch-icon" href="images/apple-touch-icon.png">
 
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -19,50 +21,20 @@
   <link href="css/styles.css" rel="stylesheet">
 </head>
 
-<body class="scroll-locked">
-
-  <!-- Reusable crest: an original spinning-top emblem -->
-  <svg width="0" height="0" style="position:absolute" aria-hidden="true">
-    <defs>
-      <symbol id="crest" viewBox="-100 -100 200 200">
-        <circle r="94" fill="none" stroke="currentColor" stroke-opacity=".35" stroke-width="1.5" />
-        <circle r="86" fill="none" stroke="var(--teal)" stroke-width="3" stroke-dasharray="4 7.26" />
-        <g class="crest-blades">
-          <g id="crest-wing">
-            <path d="M8 -26 C34 -44 70 -58 88 -24 C74 -34 50 -30 30 -10 Z" fill="var(--pink)" />
-            <path d="M30 -10 C50 -30 74 -34 88 -24 C70 -22 52 -14 40 0 Z" fill="#fff" fill-opacity=".85" />
-          </g>
-          <use href="#crest-wing" transform="rotate(120)" />
-          <use href="#crest-wing" transform="rotate(240)" />
-          <circle r="34" fill="#000" stroke="var(--teal)" stroke-width="3" />
-          <path d="M-18 -18 L18 18 M18 -18 L-18 18" stroke="var(--pink)" stroke-width="7" stroke-linecap="square" />
-          <circle r="7" fill="var(--teal)" />
-        </g>
-      </symbol>
-    </defs>
-  </svg>
-
-  <!-- Announcement -->
-  <div id="announcement" class="announcement-overlay" role="dialog" aria-modal="true" aria-labelledby="announcement-title">
-    <div class="announcement-card">
-      <svg class="announcement-crest" aria-hidden="true"><use href="#crest" /></svg>
-      <h2 id="announcement-title" class="announcement-title"><span data-bind="seasonLabel">Season</span> schedule</h2>
-      <ol id="announcement-schedule" class="announcement-schedule"></ol>
-      <p class="announcement-venue"><i class="fas fa-location-dot" aria-hidden="true"></i> <span data-bind="venue">Venue to be announced</span></p>
-      <button class="btn-primary" data-action="close-announcement">Continue to dashboard</button>
-    </div>
-  </div>
+<body>
 
   <!-- Loader -->
   <div id="loader" role="status">
-    <svg class="loader-crest" aria-hidden="true"><use href="#crest" /></svg>
+    <img class="loader-logo" src="images/logo.webp" width="1000" height="456" alt="GUMverse by Gaming Underground Market">
+    <div class="loader-title" data-bind="brandName">GUM Guild Wars</div>
+    <div class="loader-bar" aria-hidden="true"><span></span></div>
     <div class="loading-text">Loading the guild hall…</div>
   </div>
 
   <!-- Header -->
   <header class="hud">
     <a href="./" class="hud-brand">
-      <svg class="hud-crest" aria-hidden="true"><use href="#crest" /></svg>
+      <img class="hud-logo" src="images/logo-mark.webp" width="480" height="193" alt="GUMverse">
       <span data-bind="brandName">GUM Guild Wars</span>
     </a>
 
@@ -87,14 +59,14 @@
 
   <main id="dashboard" class="dashboard">
 
-    <!-- Hero: crest + season path -->
+    <!-- Hero: logo + season path -->
     <section class="hero" aria-labelledby="hero-title">
       <div class="hero-text">
         <h1 id="hero-title" class="hero-title" data-bind="brandName">GUM Guild Wars</h1>
         <p class="hero-status" id="hero-status">Loading the season…</p>
         <p class="hero-updated" id="update-time"></p>
       </div>
-      <svg class="hero-crest" aria-hidden="true"><use href="#crest" /></svg>
+      <img class="hero-logo" src="images/logo.webp" width="1000" height="456" alt="GUMverse by Gaming Underground Market">
 
       <ol class="season-path" id="progress-container" aria-label="Season progress by week"></ol>
       <p class="season-caption" id="season-caption"></p>
@@ -205,16 +177,10 @@
     <!-- Territories -->
     <section class="section" aria-labelledby="map-title">
       <div class="section-head">
-        <h2 id="map-title" class="section-title">Guild territories</h2>
-        <p class="section-note">Each logo marks a guild's home base. Select one to see its record. The teal glow is brighter where guilds win more.</p>
+        <h2 id="map-title" class="section-title">Guild Territories</h2>
+        <p class="section-note">Each logo marks a guild's home base. Select one to see its record.</p>
       </div>
       <div id="location-map" class="map"></div>
-      <div class="map-legend" aria-hidden="true">
-        <span>Win-rate glow</span>
-        <span>Low</span>
-        <span class="legend-ramp"></span>
-        <span>High</span>
-      </div>
     </section>
 
   </main>
@@ -337,7 +303,6 @@
 
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.markercluster/1.5.3/leaflet.markercluster.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.heat/0.2.0/leaflet-heat.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
   <script src="js/data.js"></script>
   <script src="js/app.js"></script>

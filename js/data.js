@@ -13,10 +13,10 @@ window.LEAGUE_CONFIG = {
   socialUrl: "https://www.facebook.com/",
   socialLabel: "Facebook",
   footer: {
-    copyright: "GUM Guild Wars League",
+    copyright: "Gaming Underground Market",
     credits: [
-      { label: "Statistics by", name: "League Stats Team", url: "#" },
-      { label: "Built by", name: "GUM Dev", url: "#" },
+      { label: "Statistics by", name: "GUM Technical", url: "#" },
+      { label: "Built by", name: "Imperial DevStar", url: "#" },
     ],
   },
 
@@ -33,17 +33,19 @@ window.LEAGUE_CONFIG = {
   },
 
   // The guilds. `lat`/`lng` place the guild's logo on the map; `logo` is an image
-  // path or URL (leave empty to show the guild's initials instead).
+  // path or URL (leave empty to show the guild's initials instead); `colors` is
+  // [fill, border] in hex for the guild's badge and map marker (border is optional).
   teams: [
-    { name: "Spartans", bracket: "A", location: "Batangas City", address: "Q3MF+VF4, Batangas City, 4200 Batangas", lat: 13.784638, lng: 121.073703, logo: "" },
-    { name: "Dreadnoughts", bracket: "A", location: "Batangas City", address: "Batangas State University STEERHUB, Alangilan, Batangas City, 4200 Batangas", lat: 13.784295, lng: 121.07428, logo: "" },
-    { name: "Monarchs", bracket: "A", location: "Lipa City", address: "W4GW+M8C, Lipa City, Batangas", lat: 13.926688, lng: 121.145766, logo: "" },
-    { name: "Warlords", bracket: "A", location: "Lemery", address: "Illustre Avenue, corner P. Gomez, Lemery, 4209 Batangas", lat: 13.87915, lng: 120.916608, logo: "" },
-    { name: "Nocturnals", bracket: "A", location: "Ibaan", address: "R46H+X7F, Ibaan, Batangas", lat: 13.812438, lng: 121.128172, logo: "" },
-    { name: "Hunters", bracket: "A", location: "San Pascual", address: "S&R Building, San Antonio, San Pascual, 4204 Batangas", lat: 13.78927, lng: 121.016548, logo: "" },
-    { name: "Knights", bracket: "A", location: "Batangas City", address: "Golden Country Homes, 15 Mars Street, Batangas City, 4200 Batangas", lat: 13.785169, lng: 121.072485, logo: "" },
+    { name: "Spartans", colors: ["#F4F4F4"], bracket: "A", location: "Batangas City", address: "Q3MF+VF4, Batangas City, 4200 Batangas", lat: 13.784638, lng: 121.073703, logo: "" },
+    // Street-level: OpenStreetMap has Rizal Avenue in Poblacion but not house number 12.
+    { name: "Dreadnoughts", colors: ["#8BA881"], bracket: "A", location: "Batangas City", address: "12 Rizal Ave, Poblacion, Batangas City, 4200 Batangas", lat: 13.755553, lng: 121.053293, logo: "" },
+    { name: "Monarchs", colors: ["#FF5DA2"], bracket: "A", location: "Lipa City", address: "W4GW+M8C, Lipa City, Batangas", lat: 13.926688, lng: 121.145766, logo: "" },
+    { name: "Warlords", colors: ["#C8102E", "#FFFFFF"], bracket: "A", location: "Lemery", address: "Illustre Avenue, corner P. Gomez, Lemery, 4209 Batangas", lat: 13.87915, lng: 120.916608, logo: "" },
+    { name: "Nocturnals", colors: ["#1E4FB8", "#C0C7D0"], bracket: "A", location: "Ibaan", address: "R46H+X7F, Ibaan, Batangas", lat: 13.812438, lng: 121.128172, logo: "" },
+    { name: "Hunters", colors: ["#000000", "#8C8C8C"], bracket: "A", location: "San Pascual", address: "S&R Building, San Antonio, San Pascual, 4204 Batangas", lat: 13.78927, lng: 121.016548, logo: "" },
+    { name: "Knights", colors: ["#9E1B32", "#9AA0A6"], bracket: "A", location: "Batangas City", address: "Golden Country Homes, 15 Mars Street, Batangas City, 4200 Batangas", lat: 13.785969, lng: 121.073925, logo: "" },
     // Approximate: Parkway Square isn't on OpenStreetMap yet, so this is Lipa city centre.
-    { name: "Wyverns", bracket: "A", location: "Lipa City", address: "Parkway Square, Lipa City, Batangas", lat: 13.941648, lng: 121.138073, logo: "" },
+    { name: "Wyverns", colors: ["#E53935"], bracket: "A", location: "Lipa City", address: "Parkway Square, Lipa City, Batangas", lat: 13.941648, lng: 121.138073, logo: "" },
   ],
 
   // Points awarded per finish type.

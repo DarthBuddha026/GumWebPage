@@ -84,14 +84,32 @@
 
   const playerPhoto = (p) => readPhotos()[p.key] || p.photo || "";
 
-  function avatarHtml(label, photo = "") {
-    const tone = hash(label) % 2 ? "pink" : "";
-    const inner = photo ? `<img src="${esc(photo)}" alt="">` : esc(initials(label));
-    return `<span class="avatar ${tone}" aria-hidden="true">${inner}</span>`;
+  // Guild colours from the data: `colors: [fill, border]` (border defaults to the fill).
+  const HEX = /^#([0-9a-f]{3}|[0-9a-f]{6})$/i;
+
+  function inkFor(hex) {
+    const h = hex.length === 4 ? hex.replace(/^#(.)(.)(.)$/, "#$1$1$2$2$3$3") : hex;
+    const [r, g, b] = [1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16) / 255);
+    const lum = 0.2126 * r + 0.7152 * g + 0.0722 * b;
+    return lum > 0.55 ? "#000" : "#fff";
   }
 
-  const playerAvatar = (p) => avatarHtml(p.name, playerPhoto(p));
-  const teamAvatar = (t) => avatarHtml(t.name, t.logo);
+  function guildStyle(teamName, prefix) {
+    const team = state.teamsByName.get(teamName);
+    const [fill, line] = ((team && team.colors) || []).filter((c) => HEX.test(c));
+    if (!fill) return "";
+    return `--${prefix}-bg:${fill};--${prefix}-line:${line || fill};--${prefix}-ink:${inkFor(fill)}`;
+  }
+
+  function avatarHtml(label, photo = "", teamName = "") {
+    const style = guildStyle(teamName, "av");
+    const tone = style ? "guild" : hash(label) % 2 ? "pink" : "";
+    const inner = photo ? `<img src="${esc(photo)}" alt="">` : esc(initials(label));
+    return `<span class="avatar ${tone}" ${style ? `style="${style}"` : ""} aria-hidden="true">${inner}</span>`;
+  }
+
+  const playerAvatar = (p) => avatarHtml(p.name, playerPhoto(p), p.team);
+  const teamAvatar = (t) => avatarHtml(t.name, t.logo, t.name);
   const bracketBadge = (b) => (SINGLE_BRACKET ? "" : `<span class="bracket-badge" title="Bracket ${esc(b)}">${esc(b)}</span>`);
 
   function portraitHtml(p, extra = "") {
@@ -304,7 +322,7 @@
     const credits = (CFG.footer.credits || [])
       .map((c) => `<span>${esc(c.label)} <a href="${esc(c.url)}" target="_blank" rel="noopener">${esc(c.name)}</a></span>`)
       .join("");
-    $("#footer").innerHTML = `<span>&copy; ${new Date().getFullYear()} ${esc(CFG.footer.copyright)}</span>${credits}`;
+    $("#footer").innerHTML = `<span>&copy; ${esc(CFG.footer.copyright)}</span>${credits}`;
 
     $("#finish-pills").innerHTML = Object.entries(FINISHES)
       .map(([f, info]) => `<button class="command-tab" role="tab" data-finish="${f}"><span class="swatch" style="--sw:${info.color}"></span>${esc(info.long)}</button>`)
@@ -346,13 +364,6 @@
 
   function renderSchedule() {
     const weeks = state.raw.weeks || [];
-
-    $("#announcement-schedule").innerHTML = weeks
-      .map((w) => {
-        const live = w.label === state.currentWeek && w.progress < 100;
-        return `<li><span>${esc(w.label)}</span><span class="${live ? "live" : "when"}">${live ? "Underway" : esc(longDate(w.date))}</span></li>`;
-      })
-      .join("");
 
     $("#schedule-list").innerHTML = weeks
       .map((w, i) => {
@@ -648,13 +659,14 @@
 
   // A guild's map marker: its logo when the data has one, otherwise its initials.
   function guildPin(t) {
-    const tone = hash(t.name) % 2 ? "pink" : "";
+    const style = guildStyle(t.name, "pin");
+    const tone = style ? "" : hash(t.name) % 2 ? "pink" : "";
     const inner = t.logo
       ? `<img src="${esc(t.logo)}" alt="" onerror="this.replaceWith(document.createTextNode('${esc(initials(t.name))}'))">`
       : esc(initials(t.name));
     return L.divIcon({
       className: "guild-pin-wrap",
-      html: `<span class="guild-pin ${tone}">${inner}</span>`,
+      html: `<span class="guild-pin ${tone}" ${style ? `style="${style}"` : ""}>${inner}</span>`,
       iconSize: [40, 40],
       iconAnchor: [20, 20],
       popupAnchor: [0, -22],
@@ -679,13 +691,6 @@
 
     const located = state.teams.filter((t) => Number.isFinite(t.lat) && Number.isFinite(t.lng));
     if (!located.length) return;
-
-    if (L.heatLayer) {
-      L.heatLayer(
-        located.map((t) => [t.lat, t.lng, 0.2 + t.winRate * 0.8]),
-        { radius: 35, blur: 28, maxZoom: 13, gradient: { 0.2: "#0b3d42", 0.6: "#0ea3ae", 1: "#3fe0ea" } }
-      ).addTo(map);
-    }
 
     // Guilds close together merge into a count badge that splits apart on zoom or click.
     const layer = L.markerClusterGroup
@@ -754,7 +759,7 @@
   function closeModal(id) {
     $(`#${id}`).classList.remove("open");
     if (id === "search-modal") closeSharePreview();
-    if (!$$(".modal-overlay.open").length && $("#announcement").classList.contains("hidden")) {
+    if (!$$(".modal-overlay.open").length) {
       document.body.classList.remove("scroll-locked");
     }
   }
@@ -1340,15 +1345,6 @@
   // Events
   // ---------------------------------------------------------------------------
 
-  function closeAnnouncement() {
-    const el = $("#announcement");
-    el.style.opacity = "0";
-    setTimeout(() => {
-      el.classList.add("hidden");
-      if (!$$(".modal-overlay.open").length) document.body.classList.remove("scroll-locked");
-    }, 300);
-  }
-
   function bindEvents() {
     $("#menu-toggle").addEventListener("click", () => {
       const open = !$("#navbar-menu").classList.contains("active");
@@ -1427,7 +1423,6 @@
       const action = e.target.closest("[data-action]");
       if (action) {
         switch (action.dataset.action) {
-          case "close-announcement": return closeAnnouncement();
           case "open-search": return openSearch();
           case "open-history": return openHistory();
           case "open-upload": return openModal("upload-modal");
@@ -1481,10 +1476,18 @@
   // Boot
   // ---------------------------------------------------------------------------
 
+  // Keep the loading screen up long enough to read, even when data is instant.
+  const MIN_LOADER_MS = 1500;
+  const bootStart = performance.now();
+
   function hideLoader() {
-    const loader = $("#loader");
-    loader.style.opacity = "0";
-    setTimeout(() => (loader.style.display = "none"), 300);
+    const wait = Math.max(0, MIN_LOADER_MS - (performance.now() - bootStart));
+    setTimeout(() => {
+      const loader = $("#loader");
+      loader.style.opacity = "0";
+      $("#dashboard").classList.add("ready");
+      setTimeout(() => (loader.style.display = "none"), 300);
+    }, wait);
   }
 
   async function init() {
@@ -1499,12 +1502,10 @@
       initUpload();
       makeRowsFocusable();
       new MutationObserver(makeRowsFocusable).observe(document.body, { childList: true, subtree: true });
-      $("#dashboard").classList.add("ready");
       hideLoader();
     } catch (err) {
       console.error(err);
       $("#loader").innerHTML = `<div class="load-error"><i class="fas fa-triangle-exclamation" aria-hidden="true"></i><br>The dashboard couldn't load. ${esc(err.message)}</div>`;
-      closeAnnouncement();
     }
   }
 

@@ -1,6 +1,6 @@
 // Network-first service worker: always try fresh data, fall back to cache offline.
-const CACHE = "gum-guild-wars-v2";
-const SHELL = ["./", "index.html", "css/styles.css", "js/data.js", "js/app.js", "manifest.json"];
+const CACHE = "gum-guild-wars-v3";
+const SHELL = ["./", "index.html", "css/styles.css", "js/data.js", "js/app.js", "manifest.json", "images/logo.webp", "images/logo-mark.webp"];
 
 self.addEventListener("install", (event) => {
   event.waitUntil(caches.open(CACHE).then((cache) => cache.addAll(SHELL)));
