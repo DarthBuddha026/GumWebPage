@@ -910,7 +910,7 @@ body.mock-mode .mock-ticker { display: flex; }
 .map .leaflet-popup-tip { background: var(--black); color: var(--bone); border: 1px solid var(--line-strong); }
 .map .leaflet-popup-content { font-family: var(--font-ui); font-size: var(--t-s); }
 .map .leaflet-popup-content a { color: var(--teal-bright); }
-.map-popup-head { font-weight: 700; font-size: var(--t-m); }
+.map-popup-head { font-weight: 700; font-size: var(--t-m); margin-bottom: 6px; }
 .map .leaflet-popup-content a.map-popup-link { display: inline-block; margin-top: 8px; font-weight: 600; }
 
 /* Guild markers: logo (or initials) in a bevelled tile at the guild's location */
@@ -971,7 +971,6 @@ body.mock-mode .mock-ticker { display: flex; }
 }
 
 .map .leaflet-tooltip.guild-tip::before { border-top-color: var(--line-strong); }
-.map-popup-meta { color: var(--ash); margin-bottom: 6px; }
 
 /* ---------- Footer ---------- */
 

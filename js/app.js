@@ -723,7 +723,6 @@
         .bindTooltip(esc(t.name), { direction: "top", className: "guild-tip" })
         .bindPopup(
           `<div class="map-popup-head">${esc(t.name)}</div>
-           <div class="map-popup-meta">${esc(t.address || t.location)}</div>
            <div>${record(t.wins, t.losses)} record, ${pct(t.winRate)} win rate, ${t.points} points</div>
            <a href="#" class="map-popup-link" data-open-team="${esc(t.name)}">View guild</a>`
         )
