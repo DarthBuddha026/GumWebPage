@@ -930,7 +930,7 @@
       <div class="blader-card" data-open-player="${esc(p.key)}">
         ${playerAvatar(p)}
         <div class="blader-info">
-          <div class="blader-name">${esc(p.name)}</div>
+          <div class="blader-name">${esc(p.name)}${p.ign ? ` | ${esc(p.ign)}` : ""}</div>
           <div class="blader-tags">${roleTag(p)}${rankTag(p)}${bracketBadge(p.bracket)}<span class="tag">${esc(p.team)}</span></div>
         </div>
         <div class="blader-score"><b>${fmt2(p.mvp)}</b><span>MVP score</span></div>
