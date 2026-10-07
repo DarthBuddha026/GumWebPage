@@ -2,7 +2,8 @@
    Configuration
    --------------------------------------------------------------------------
    Guilds, bladers, the schedule and results all come from the league admin
-   (`leagueUrl`). This file only holds site settings and scoring rules.
+   (`leagueUrl`). This file holds site settings, scoring rules and a small
+   helper the admin loads from here.
    ========================================================================== */
 
 window.LEAGUE_CONFIG = {
@@ -40,3 +41,26 @@ window.LEAGUE_CONFIG = {
 
   map: { center: [13.84, 121.06], zoom: 11 },
 };
+
+// Shared with the league admin, which loads this file for its schedule generator.
+(function () {
+  // Round-robin pairings (circle method). Returns an array of rounds.
+  function roundRobin(items) {
+    const list = items.slice();
+    if (list.length % 2) list.push(null);
+    const rounds = [];
+    for (let r = 0; r < list.length - 1; r++) {
+      const pairs = [];
+      for (let i = 0; i < list.length / 2; i++) {
+        const a = list[i];
+        const b = list[list.length - 1 - i];
+        if (a && b) pairs.push(r % 2 ? [b, a] : [a, b]);
+      }
+      rounds.push(pairs);
+      list.splice(1, 0, list.pop());
+    }
+    return rounds;
+  }
+
+  window.leagueTools = { roundRobin };
+})();

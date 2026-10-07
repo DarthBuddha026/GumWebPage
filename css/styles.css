@@ -666,6 +666,7 @@ a { color: inherit; }
 
 .tag.top { background: rgba(255, 46, 136, 0.16); color: var(--pink); }
 .tag.unranked { background: none; border: 1px dashed var(--line); }
+.tag.role { background: rgba(14, 163, 174, 0.16); color: var(--teal); }
 
 /* ---------- Season titles ---------- */
 

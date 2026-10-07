@@ -17,6 +17,14 @@
     extreme: { label: "Extreme", long: "Extreme finish", color: "var(--f-extreme)" },
   };
 
+  // Guild roles set in the admin (`guildRole` on each blader). Each guild has at most one
+  // Guild Leader and one Battle Master; everyone else is a member and shows no role tag.
+  const GUILD_ROLES = {
+    leader: { label: "Guild Leader", icon: "fa-chess-king" },
+    "battle-master": { label: "Battle Master", icon: "fa-shield-halved" },
+  };
+  const roleOrder = (p) => (p.guildRole in GUILD_ROLES ? Object.keys(GUILD_ROLES).indexOf(p.guildRole) : Infinity);
+
   const state = {
     raw: null,
     players: [],
@@ -81,10 +89,15 @@
     return `--${prefix}-bg:${fill};--${prefix}-line:${line || fill};--${prefix}-ink:${inkFor(fill)}`;
   }
 
+  // Images uploaded in the admin are loaded with CORS so profile cards can draw them onto a canvas.
+  const ADMIN_ORIGIN = CFG.leagueUrl ? new URL(CFG.leagueUrl).origin : null;
+  const imgTag = (src, attrs = "") =>
+    `<img src="${esc(src)}" alt=""${ADMIN_ORIGIN && src.startsWith(`${ADMIN_ORIGIN}/`) ? ' crossorigin="anonymous"' : ""}${attrs}>`;
+
   function avatarHtml(label, photo = "", teamName = "") {
     const style = guildStyle(teamName, "av");
     const tone = style ? "guild" : hash(label) % 2 ? "pink" : "";
-    const inner = photo ? `<img src="${esc(photo)}" alt="">` : esc(initials(label));
+    const inner = photo ? imgTag(photo) : esc(initials(label));
     return `<span class="avatar ${tone}" ${style ? `style="${style}"` : ""} aria-hidden="true">${inner}</span>`;
   }
 
@@ -94,7 +107,7 @@
 
   function portraitHtml(p, extra = "") {
     const photo = playerPhoto(p);
-    return `<div class="portrait">${extra}${photo ? `<img src="${esc(photo)}" alt="">` : esc(initials(p.name))}</div>`;
+    return `<div class="portrait">${extra}${photo ? imgTag(photo) : esc(initials(p.name))}</div>`;
   }
 
   function meter(value, { color, segmented = false, cls = "" } = {}) {
@@ -142,8 +155,15 @@
         const res = await fetch(CFG.leagueUrl, { cache: "no-store", signal: controller.signal });
         if (!res.ok) throw new Error(`The league data request failed with status ${res.status}.`);
         const league = await res.json();
-        // Uploaded logos and photos are /api/image paths on the admin's deployment.
-        const fromAdmin = (ref) => (ref && ref.startsWith("/api/") ? new URL(ref, CFG.leagueUrl).href : ref);
+        // Uploaded logos and photos are /api/image paths on the admin's deployment. The
+        // `cors` param gives them a new URL, so browsers don't reuse copies cached before
+        // the admin sent CORS headers (images are cached as immutable for a year).
+        const fromAdmin = (ref) => {
+          if (!ref || !ref.startsWith("/api/")) return ref;
+          const url = new URL(ref, CFG.leagueUrl);
+          url.searchParams.set("cors", "1");
+          return url.href;
+        };
         league.guilds = (league.guilds || []).map((g) => ({ ...g, logo: fromAdmin(g.logo) }));
         league.players = (league.players || []).map((p) => ({ ...p, photo: fromAdmin(p.photo) }));
         league.season = { weeks: [], matches: [], ...league.season };
@@ -672,7 +692,7 @@
     const style = guildStyle(t.name, "pin");
     const tone = style ? "" : hash(t.name) % 2 ? "pink" : "";
     const inner = t.logo
-      ? `<img src="${esc(t.logo)}" alt="" onerror="this.replaceWith(document.createTextNode('${esc(initials(t.name))}'))">`
+      ? imgTag(t.logo, ` onerror="this.replaceWith(document.createTextNode('${esc(initials(t.name))}'))"`)
       : esc(initials(t.name));
     return L.divIcon({
       className: "guild-pin-wrap",
@@ -900,13 +920,18 @@
       : `<span class="tag unranked">Not ranked yet</span>`;
   }
 
+  function roleTag(p) {
+    const role = GUILD_ROLES[p.guildRole];
+    return role ? `<span class="tag role"><i class="fas ${role.icon}" aria-hidden="true"></i>${role.label}</span>` : "";
+  }
+
   function bladerCard(p) {
     return `
       <div class="blader-card" data-open-player="${esc(p.key)}">
         ${playerAvatar(p)}
         <div class="blader-info">
           <div class="blader-name">${esc(p.name)}</div>
-          <div class="blader-tags">${rankTag(p)}${bracketBadge(p.bracket)}<span class="tag">${esc(p.team)}</span></div>
+          <div class="blader-tags">${roleTag(p)}${rankTag(p)}${bracketBadge(p.bracket)}<span class="tag">${esc(p.team)}</span></div>
         </div>
         <div class="blader-score"><b>${fmt2(p.mvp)}</b><span>MVP score</span></div>
       </div>`;
@@ -915,7 +940,8 @@
   function renderRoster(teamName) {
     const t = state.teamsByName.get(teamName);
     setText("search-title", t.name);
-    const roster = state.players.filter((p) => p.team === t.name).sort((a, b) => b.mvp - a.mvp);
+    // Guild Leader first, then Battle Master, then everyone else by MVP score.
+    const roster = state.players.filter((p) => p.team === t.name).sort((a, b) => roleOrder(a) - roleOrder(b) || b.mvp - a.mvp);
     $("#roster-view").innerHTML = `
       <div class="roster">
         <div class="stat-strip">
@@ -970,6 +996,7 @@
               <span class="tag">${esc(p.key)}</span>
               <button class="guild-link" data-open-team="${esc(p.team)}">${esc(p.team)}</button>
               ${bracketBadge(p.bracket)}
+              ${roleTag(p)}
               ${champion ? '<span class="tag top"><i class="fas fa-crown" aria-hidden="true"></i> Champion</span>' : ""}
             </div>
           </div>
