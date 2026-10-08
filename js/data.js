@@ -23,7 +23,7 @@ window.LEAGUE_CONFIG = {
 
   // The league admin's API (a separate deployment). Guilds, bladers, the schedule
   // and results all come from here.
-  leagueUrl: "https://gum-guildwars-admin.vercel.app/api/league",
+  leagueUrl: "https://gumverse-dashboard.vercel.app/api/league",
 
   // External standings links per bracket (leave url empty until it exists).
   // Add more letters (B, C, ...) and set each guild's `bracket` in the admin to split the league.
