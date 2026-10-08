@@ -426,7 +426,7 @@ a { color: inherit; }
 }
 
 .stage:last-child::before { display: none; }
-.stage.done::before { background: var(--teal); }
+.stage.done::before { background: var(--pink); }
 .stage.live::before { background: linear-gradient(90deg, var(--pink) var(--p), var(--line) var(--p)); }
 
 .stage-node {
@@ -445,7 +445,7 @@ a { color: inherit; }
   font-variant-numeric: tabular-nums;
 }
 
-.stage.done .stage-node { border-color: var(--teal); color: var(--bone); }
+.stage.done .stage-node { border-color: var(--pink); color: var(--bone); }
 
 .stage.done .stage-node::after {
   content: "\f00c";
@@ -457,7 +457,7 @@ a { color: inherit; }
   display: grid;
   place-items: center;
   border-radius: 50%;
-  background: var(--teal);
+  background: var(--pink);
   color: var(--black);
   font: 900 9px "Font Awesome 6 Free";
 }
