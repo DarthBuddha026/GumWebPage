@@ -917,7 +917,7 @@
         .sort((a, b) => (a.leagueRank || 1e9) - (b.leagueRank || 1e9) || a.name.localeCompare(b.name))
         .slice(0, 100);
       out.innerHTML = players.length
-        ? `<div class="roster">${players.map(bladerCard).join("")}</div>`
+        ? `<div class="roster">${players.map((p) => bladerCard(p)).join("")}</div>`
         : emptyState("fa-user-slash", "No bladers match that search", "Try another name, blader ID, guild or bracket.");
     }
   }
@@ -933,13 +933,14 @@
     return role ? `<span class="tag role"><i class="fas ${role.icon}" aria-hidden="true"></i>${role.label}</span>` : "";
   }
 
-  function bladerCard(p) {
+  // `showGuild` is off inside a guild's own roster, where the guild is already obvious.
+  function bladerCard(p, showGuild = true) {
     return `
       <div class="blader-card" data-open-player="${esc(p.key)}">
         ${playerAvatar(p)}
         <div class="blader-info">
           <div class="blader-name">${esc(p.name)}${p.ign ? ` | ${esc(p.ign)}` : ""}</div>
-          <div class="blader-tags">${roleTag(p)}${rankTag(p)}${bracketBadge(p.bracket)}<span class="tag">${esc(p.team)}</span></div>
+          <div class="blader-tags">${roleTag(p)}${rankTag(p)}${bracketBadge(p.bracket)}${showGuild ? `<span class="tag">${esc(p.team)}</span>` : ""}</div>
         </div>
         <div class="blader-score"><b>${fmt2(p.mvp)}</b><span>MVP score</span></div>
       </div>`;
@@ -947,11 +948,11 @@
 
   function renderRoster(teamName) {
     const t = state.teamsByName.get(teamName);
-    setText("search-title", t.name);
+    $("#search-title").innerHTML = `${teamAvatar(t)}${esc(t.name)}`;
     // Guild Leader first, then Battle Master, then everyone else by MVP score.
     const roster = state.players.filter((p) => p.team === t.name).sort((a, b) => roleOrder(a) - roleOrder(b) || b.mvp - a.mvp);
     $("#roster-view").innerHTML = `
-      <div class="roster">
+      <div class="roster" id="guild-capture">
         <div class="stat-strip">
           <div><b>#${t.bracketRank}</b><span>${SINGLE_BRACKET ? "League rank" : `In bracket ${esc(t.bracket)}`}</span></div>
           <div><b>${record(t.wins, t.losses)}</b><span>Record</span></div>
@@ -959,10 +960,13 @@
           <div><b>${t.points}</b><span>Points</span></div>
         </div>
         <div class="roster-meta">
-          <p>${t.location ? `${esc(t.location)}, ` : ""}${plural(roster.length, "blader")}</p>
-          <button class="btn-secondary" data-history-team="${esc(t.name)}"><i class="fas fa-scroll" aria-hidden="true"></i> Battle log</button>
+          <p>${esc(t.location || "")}</p>
+          <div class="roster-actions" data-html2canvas-ignore="true">
+            <button class="btn-secondary" data-action="share-guild"><i class="fas fa-share" aria-hidden="true"></i> Share</button>
+            <button class="btn-secondary" data-history-team="${esc(t.name)}"><i class="fas fa-scroll" aria-hidden="true"></i> Battle log</button>
+          </div>
         </div>
-        ${roster.map(bladerCard).join("") || emptyState("fa-user-slash", "No bladers on this guild", "Bladers appear here once they're registered.")}
+        ${roster.map((p) => bladerCard(p, false)).join("") || emptyState("fa-user-slash", "No bladers on this guild", "Bladers appear here once they're registered.")}
       </div>`;
   }
 
@@ -1001,7 +1005,6 @@
           <div>
             <h2 class="profile-name">${esc(p.name)}</h2>
             <div class="profile-tags">
-              <span class="tag">${esc(p.key)}</span>
               <button class="guild-link" data-open-team="${esc(p.team)}">${esc(p.team)}</button>
               ${bracketBadge(p.bracket)}
               ${roleTag(p)}
@@ -1066,10 +1069,11 @@
     return html2canvasLoading;
   }
 
-  async function shareProfile() {
-    const target = $("#profile-capture");
+  // Draws `target` to an image and opens the share preview. `onclone` can adjust the copy
+  // that gets drawn (the page itself is left alone).
+  async function shareCard(target, fileName, onclone) {
     if (!target) return;
-    toast("Making the profile card…");
+    toast("Making the card…");
     try {
       await loadHtml2canvas();
     } catch (err) {
@@ -1078,17 +1082,32 @@
       return;
     }
     try {
-      const canvas = await html2canvas(target, { backgroundColor: "#000000", scale: 2, useCORS: true });
+      const canvas = await html2canvas(target, { backgroundColor: "#000000", scale: 2, useCORS: true, onclone });
       state.shareBlob = await new Promise((resolve) => canvas.toBlob(resolve, "image/png"));
+      state.shareFileName = fileName;
       $("#share-image").src = canvas.toDataURL("image/png");
       $("#share-overlay").classList.add("open");
     } catch (err) {
       console.error(err);
-      toast("Couldn't make the profile card. Try again.");
+      toast("Couldn't make the card. Try again.");
     }
   }
 
-  const shareFileName = () => `${state.search.stack.at(-1)?.arg || "blader"}-profile.png`;
+  function shareProfile() {
+    const key = state.search.stack.at(-1)?.arg || "blader";
+    return shareCard($("#profile-capture"), `${key}-profile.png`);
+  }
+
+  // The guild's logo and name live in the modal header, so the card gets its own heading.
+  function shareGuild() {
+    const t = state.teamsByName.get(state.search.stack.at(-1)?.arg);
+    if (!t) return;
+    return shareCard($("#guild-capture"), `${t.name}-guild.png`, (doc) => {
+      doc.getElementById("guild-capture").insertAdjacentHTML("afterbegin", `<div class="guild-card-head">${teamAvatar(t)}<span>${esc(t.name)}</span></div>`);
+    });
+  }
+
+  const shareFileName = () => state.shareFileName || "card.png";
 
   function downloadShareImage() {
     if (!state.shareBlob) return;
@@ -1389,6 +1408,7 @@
           case "open-schedule": return openModal("schedule-modal");
           case "open-brackets": return openModal("brackets-modal");
           case "share-profile": return shareProfile();
+          case "share-guild": return shareGuild();
         }
       }
 
