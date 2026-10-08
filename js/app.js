@@ -586,10 +586,10 @@
     const league = state.league;
     const best = (fn) => league.reduce((top, p) => (!top || fn(p) > fn(top) ? p : top), null);
     const rows = [
-      { title: "MVP leader", p: league[0], value: (p) => fmt2(p.mvp), unit: "MVP score" },
-      { title: "Top scorer", p: best((p) => p.overall.points), value: (p) => p.overall.points, unit: "points this season" },
-      { title: "Sharpest blade", p: league.slice().sort((a, b) => b.winRate - a.winRate || b.mvp - a.mvp)[0], value: (p) => pct(p.winRate), unit: "win rate" },
-      { title: "Iron wall", p: best((p) => p.overall.defense), value: (p) => fmt2(p.overall.conceded / p.overall.games), unit: "points given up per game" },
+      { title: "MVP Leader", p: league[0], value: (p) => fmt2(p.mvp), unit: "MVP score" },
+      { title: "Top Scorer", p: best((p) => p.overall.points), value: (p) => p.overall.points, unit: "points this season" },
+      { title: "Sharpest Blade", p: league.slice().sort((a, b) => b.winRate - a.winRate || b.mvp - a.mvp)[0], value: (p) => pct(p.winRate), unit: "win rate" },
+      { title: "Iron Wall", p: best((p) => p.overall.defense), value: (p) => fmt2(p.overall.conceded / p.overall.games), unit: "points given up per game" },
       { title: "Stamina King", finish: "spin", p: best((p) => p.overall.spinPG), value: (p) => fmt2(p.overall.spinPG), unit: "stamina finishes per game" },
       { title: "Overlord", finish: "over", p: best((p) => p.overall.overPG), value: (p) => fmt2(p.overall.overPG), unit: "over finishes per game" },
       { title: "Burst God", finish: "burst", p: best((p) => p.overall.burstPG), value: (p) => fmt2(p.overall.burstPG), unit: "burst finishes per game" },
