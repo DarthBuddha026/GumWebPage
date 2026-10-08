@@ -913,25 +913,31 @@ a { color: inherit; }
 
 .guild-pin.pink { border-color: var(--pink); }
 
-/* A stack of guilds: count in a tile with an offset "card behind" edge */
-.guild-pin.cluster {
-  width: 44px;
-  height: 44px;
-  align-content: center;
-  gap: 0;
-  border-color: var(--bone);
-  background: var(--black);
-  box-shadow: 4px 4px 0 -1px var(--pink), 0 4px 14px rgba(0, 0, 0, 0.7);
-  line-height: 1;
-  cursor: pointer;
-}
+/* A stack of guilds: one guild's pin with an offset "card behind" edge and a count badge */
+.guild-stack { position: relative; display: grid; cursor: pointer; }
+.guild-pin.stacked { box-shadow: 4px 4px 0 -1px var(--pink), 0 4px 14px rgba(0, 0, 0, 0.7); }
 
-.guild-pin.cluster b { font-size: var(--t-m); }
-.guild-pin.cluster small { font-size: 0.55rem; font-weight: 500; color: var(--ash); }
+.stack-count {
+  position: absolute;
+  top: -7px;
+  right: -7px;
+  display: grid;
+  place-items: center;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 4px;
+  border-radius: 9px;
+  background: var(--pink);
+  color: var(--bone);
+  font-size: 0.65rem;
+  line-height: 1;
+  box-shadow: 0 0 0 2px var(--black);
+}
 
 /* Spider legs when a stack fans out */
 .map .leaflet-cluster-spider-leg { stroke: var(--teal); stroke-opacity: 0.6; }
-.guild-pin img { width: 100%; height: 100%; object-fit: cover; }
+/* .map beats Leaflet's ".leaflet-container .leaflet-marker-pane img { width: auto }" */
+.map .guild-pin img { width: 100%; height: 100%; object-fit: cover; }
 .leaflet-marker-icon:hover .guild-pin,
 .leaflet-marker-icon:focus-visible .guild-pin { transform: scale(1.15); border-color: var(--bone); }
 
@@ -1515,7 +1521,6 @@ a.bracket-launch:hover { border-color: var(--pink); background: var(--surface-ra
 
   /* Smaller map markers so phones show more of the map (they stay centred on the spot) */
   .guild-pin { width: 32px; height: 32px; border-radius: 7px; font-size: 0.7rem; }
-  .guild-pin.cluster { width: 38px; height: 38px; }
 
   .modal-overlay { padding: 0; }
   .modal-card, .modal-card.wide, .modal-card.auto { max-width: 100%; height: 100%; max-height: 100%; border-radius: 0; border: none; }

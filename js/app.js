@@ -688,15 +688,19 @@
   }
 
   // A guild's map marker: its logo when the data has one, otherwise its initials.
-  function guildPin(t) {
+  function guildPinHtml(t, cls = "") {
     const style = guildStyle(t.name, "pin");
     const tone = style ? "" : hash(t.name) % 2 ? "pink" : "";
     const inner = t.logo
       ? imgTag(t.logo, ` onerror="this.replaceWith(document.createTextNode('${esc(initials(t.name))}'))"`)
       : esc(initials(t.name));
+    return `<span class="guild-pin ${tone} ${cls}" ${style ? `style="${style}"` : ""}>${inner}</span>`;
+  }
+
+  function guildPin(t) {
     return L.divIcon({
       className: "guild-pin-wrap",
-      html: `<span class="guild-pin ${tone}" ${style ? `style="${style}"` : ""}>${inner}</span>`,
+      html: guildPinHtml(t),
       iconSize: [40, 40],
       iconAnchor: [20, 20],
       popupAnchor: [0, -22],
@@ -722,27 +726,31 @@
     const located = state.teams.filter((t) => Number.isFinite(t.lat) && Number.isFinite(t.lng));
     if (!located.length) return;
 
-    // Guilds close together merge into a count badge that splits apart on zoom or click.
+    // Guilds close together merge into a stack that splits apart on zoom or click. The stack
+    // shows one of its guilds (one with an uploaded logo if there is one) plus a count.
     const layer = L.markerClusterGroup
       ? L.markerClusterGroup({
           maxClusterRadius: 44,
           showCoverageOnHover: false,
           spiderfyOnMaxZoom: true,
           spiderfyDistanceMultiplier: 1.6,
-          iconCreateFunction: (cluster) =>
-            L.divIcon({
+          iconCreateFunction: (cluster) => {
+            const guilds = cluster.getAllChildMarkers().map((m) => m.options.guild);
+            const lead = guilds.find((g) => g.logo) || guilds[0];
+            return L.divIcon({
               className: "guild-pin-wrap",
-              html: `<span class="guild-pin cluster"><b>${cluster.getChildCount()}</b><small>guilds</small></span>`,
+              html: `<span class="guild-stack" title="${esc(guilds.map((g) => g.name).join(", "))}">${guildPinHtml(lead, "stacked")}<b class="stack-count">${guilds.length}</b></span>`,
               iconSize: [44, 44],
               iconAnchor: [22, 22],
-            }),
+            });
+          },
         })
       : L.layerGroup();
     layer.addTo(map);
 
     // One marker per guild at its exact home location.
     located.forEach((t) => {
-      L.marker([t.lat, t.lng], { icon: guildPin(t), riseOnHover: true, title: t.name, keyboard: true })
+      L.marker([t.lat, t.lng], { icon: guildPin(t), guild: t, riseOnHover: true, title: t.name, keyboard: true })
         .bindTooltip(esc(t.name), { direction: "top", className: "guild-tip" })
         .bindPopup(
           `<div class="map-popup-head">${esc(t.name)}</div>
