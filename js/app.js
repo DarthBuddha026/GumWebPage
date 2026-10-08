@@ -201,7 +201,8 @@
       .map(({ w }) => {
         const inWeek = matches.filter((m) => m.week === w.label);
         const done = inWeek.filter((m) => m.bouts.length || m.defaultWinner).length;
-        return { label: w.label, date: w.date, progress: inWeek.length ? Math.round((done / inWeek.length) * 100) : 0 };
+        // Weeks without fixtures (openings, raids) are complete once the admin marks them done.
+        return { label: w.label, date: w.date, progress: inWeek.length ? Math.round((done / inWeek.length) * 100) : w.done ? 100 : 0 };
       });
 
     return {
