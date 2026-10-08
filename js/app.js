@@ -459,14 +459,22 @@
     const withGames = state.players.filter((p) => p.overall.games);
     const avgPPG = withGames.length ? withGames.reduce((s, p) => s + p.overall.ppg, 0) / withGames.length : 0;
     const current = weeks.find((w) => w.label === state.currentWeek);
-    const weekText = !current
+    // Weeks arrive sorted by date, so the first one opens the season.
+    const opener = weeks[0];
+    const weekText = !opener
       ? "The season hasn't started yet."
-      : current.progress >= 100
-        ? `${current.label} is complete.`
-        : `${current.label} is underway.`;
+      : !weeks.some((w) => w.progress > 0)
+        ? // Non-breaking spaces keep the day and date ("Sun, Oct 25") on one line.
+          `The season opens with ${opener.label}${opener.date ? ` on ${longDate(opener.date).replace(/ /g, " ")}` : ""}.`
+        : current.progress >= 100
+          ? `${current.label} is complete.`
+          : `${current.label} is underway.`;
 
+    // Match days (weeks) and match-ups (matches) are set separately in the admin.
     const progressText = !total
-      ? "The schedule hasn't been posted yet."
+      ? weeks.length
+        ? "Match-ups haven't been set yet."
+        : "The schedule hasn't been posted yet."
       : !played
         ? `${plural(total, "guild match", "guild matches")} on the schedule.`
         : `${played} of ${total} guild matches are done, and bladers average ${fmt2(avgPPG)} points a game.`;
