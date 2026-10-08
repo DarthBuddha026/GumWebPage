@@ -954,7 +954,7 @@
     $("#roster-view").innerHTML = `
       <div class="roster" id="guild-capture">
         <div class="stat-strip">
-          <div><b>#${t.bracketRank}</b><span>${SINGLE_BRACKET ? "League rank" : `In bracket ${esc(t.bracket)}`}</span></div>
+          <div><b>${t.played ? `#${t.bracketRank}` : "–"}</b><span>${SINGLE_BRACKET ? "League rank" : `In bracket ${esc(t.bracket)}`}</span></div>
           <div><b>${record(t.wins, t.losses)}</b><span>Record</span></div>
           <div><b>${pct(t.winRate)}</b><span>Win rate</span></div>
           <div><b>${t.points}</b><span>Points</span></div>
