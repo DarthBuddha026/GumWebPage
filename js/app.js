@@ -439,18 +439,40 @@
 
     $("#schedule-list").innerHTML = weeks
       .map((w, i) => {
-        const count = state.raw.matches.filter((m) => m.week === w.label).length;
+        const fixtures = state.raw.matches.filter((m) => m.week === w.label);
         const status = w.progress >= 100 ? "Complete" : w.progress > 0 ? `${w.progress}% played` : "Upcoming";
-        return `
-          <li class="list-item static">
+        const row = (cls, chev) => `
+          <div class="list-item ${cls}">
             <span class="avatar ${w.label === state.currentWeek ? "pink" : ""}" aria-hidden="true">${i + 1}</span>
             <div class="stack">
               <span class="primary">${esc(w.label)}</span>
-              <span class="secondary"><span>${esc(longDate(w.date))}</span><span>${plural(count, "team match", "team matches")}</span><span>${esc(status)}</span></span>
+              <span class="secondary"><span>${esc(longDate(w.date))}</span><span>${plural(fixtures.length, "team match", "team matches")}</span><span>${esc(status)}</span></span>
             </div>
+            ${chev ? '<i class="fas fa-chevron-down chev" aria-hidden="true"></i>' : ""}
+          </div>`;
+        // Match days with match-ups open to list them; the rest stay plain rows.
+        if (!fixtures.length) return `<li>${row("static", false)}</li>`;
+        return `
+          <li>
+            <details class="schedule-week">
+              <summary>${row("", true)}</summary>
+              <ul class="fixtures">${fixtures.map(fixtureRow).join("")}</ul>
+            </details>
           </li>`;
       })
       .join("");
+  }
+
+  // One match-up: both guilds, with the score once it's played (bout wins, or a default win).
+  function fixtureRow(m) {
+    const side = (name) => {
+      const t = state.teamsByName.get(name) || { name };
+      const won = m.result?.winner === name;
+      return `<span class="fixture-team ${won ? "won" : ""}">${teamAvatar(t)}<span>${esc(name)}</span></span>`;
+    };
+    const r = m.result;
+    const mid = !r ? '<span class="fixture-vs">vs</span>' : r.byDefault ? '<span class="fixture-vs">Default</span>' : `<b class="fixture-score">${r.bouts1}–${r.bouts2}</b>`;
+    return `<li class="fixture">${side(m.team1)}${mid}${side(m.team2)}</li>`;
   }
 
   function renderHero() {

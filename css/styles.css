@@ -1121,6 +1121,24 @@ a { color: inherit; }
 .list-item .secondary { color: var(--ash); font-size: var(--t-xs); display: flex; flex-wrap: wrap; gap: 4px 12px; }
 .list-item .chev { color: var(--ash); }
 
+/* Schedule: a match day opens to list its match-ups */
+.schedule-week summary { list-style: none; }
+.schedule-week summary::-webkit-details-marker { display: none; }
+.schedule-week .chev { transition: transform var(--ease); }
+.schedule-week[open] .chev { transform: rotate(180deg); }
+.schedule-week[open] summary .list-item { border-bottom-color: transparent; }
+
+.fixtures { list-style: none; margin: 0; padding: 0 16px 12px 64px; border-bottom: 1px solid var(--line); }
+.fixture { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); align-items: center; gap: 12px; padding: 8px 0; }
+.fixture + .fixture { border-top: 1px solid var(--line); }
+.fixture-team { display: flex; align-items: center; gap: 10px; min-width: 0; color: var(--ash); font-size: var(--t-s); }
+.fixture-team:last-child { flex-direction: row-reverse; text-align: right; }
+.fixture-team span:last-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.fixture-team .avatar { width: 28px; height: 28px; }
+.fixture-team.won { color: var(--bone); font-weight: 600; }
+.fixture-vs { color: var(--ash); font-size: var(--t-xs); text-transform: uppercase; }
+.fixture-score { font-variant-numeric: tabular-nums; }
+
 .empty-state { padding: 48px 24px; text-align: center; color: var(--ash); }
 .empty-state i { display: block; margin-bottom: 12px; font-size: 2rem; color: var(--teal); }
 .empty-state h4 { margin: 0 0 4px; color: var(--bone); font-size: var(--t-l); }
@@ -1526,6 +1544,7 @@ a.bracket-launch:hover { border-color: var(--pink); background: var(--surface-ra
 }
 
 @media (max-width: 560px) {
+  .fixtures { padding-left: 16px; }
   :root { --hud-h: 56px; }
   .hud-brand { font-size: var(--t-m); }
   .hud-logo { height: 38px; }
