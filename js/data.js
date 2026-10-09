@@ -15,8 +15,9 @@ window.LEAGUE_CONFIG = {
   socialLabel: "Facebook",
   footer: {
     copyright: "Gaming Underground Market",
+    copyrightUrl: "https://www.facebook.com/gamingundergroundmarket",
     credits: [
-      { label: "Statistics by", name: "GUM Technical", url: "#" },
+      { label: "Statistics by", name: "GUM Technical" },
       { label: "Built by", name: "Imperial DevStar", url: "#" },
     ],
   },

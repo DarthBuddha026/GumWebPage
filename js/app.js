@@ -393,9 +393,12 @@
     }
 
     const credits = (CFG.footer.credits || [])
-      .map((c) => `<span>${esc(c.label)} <a href="${esc(c.url)}" target="_blank" rel="noopener">${esc(c.name)}</a></span>`)
+      // Credits without a url are plain text.
+      .map((c) => `<span>${esc(c.label)} ${c.url ? `<a href="${esc(c.url)}" target="_blank" rel="noopener">${esc(c.name)}</a>` : esc(c.name)}</span>`)
       .join("");
-    $("#footer").innerHTML = `<span>&copy; ${esc(CFG.footer.copyright)}</span>${credits}`;
+    const { copyright, copyrightUrl } = CFG.footer;
+    const owner = copyrightUrl ? `<a href="${esc(copyrightUrl)}" target="_blank" rel="noopener">${esc(copyright)}</a>` : esc(copyright);
+    $("#footer").innerHTML = `<span>&copy; ${owner}</span>${credits}`;
 
     $("#finish-pills").innerHTML = Object.entries(FINISHES)
       .map(([f, info]) => `<button class="command-tab" role="tab" data-finish="${f}"><span class="swatch" style="--sw:${info.color}"></span>${esc(info.long)}</button>`)
