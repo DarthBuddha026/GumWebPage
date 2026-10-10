@@ -189,7 +189,7 @@
     const weekLabel = new Map(season.weeks.map((w) => [w.id, w.label]));
     const matches = season.matches.map((m) => {
       const r = results[m.id];
-      const base = { id: m.id, week: weekLabel.get(m.weekId), bracket: bracketOf.get(m.team1) || "A", team1: m.team1, team2: m.team2, bouts: [] };
+      const base = { id: m.id, week: weekLabel.get(m.weekId), bracket: bracketOf.get(m.team1) || "A", round: m.round, team1: m.team1, team2: m.team2, bouts: [] };
       if (r?.status === "final") base.bouts = r.bouts.map(({ p1, p2, p1Pts, p2Pts, rounds }) => ({ p1, p2, p1Pts, p2Pts, rounds }));
       if (r?.status === "default") base.defaultWinner = r.defaultWinner === 1 ? m.team1 : m.team2;
       return base;
@@ -459,7 +459,7 @@
           <li>
             <details class="schedule-week">
               <summary>${row("", true)}</summary>
-              <ul class="fixtures">${fixtures.map(fixtureRow).join("")}</ul>
+              <ul class="fixtures">${fixtures.map((m, j) => (m.round && m.round !== fixtures[j - 1]?.round ? `<li class="fixture-round">Round ${m.round}</li>` : "") + fixtureRow(m)).join("")}</ul>
             </details>
           </li>`;
       })

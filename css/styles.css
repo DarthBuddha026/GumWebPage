@@ -1138,6 +1138,7 @@ a { color: inherit; }
 .fixture-team.won { color: var(--bone); font-weight: 600; }
 .fixture-vs { color: var(--ash); font-size: var(--t-xs); text-transform: uppercase; }
 .fixture-score { font-variant-numeric: tabular-nums; }
+.fixture-round { padding: 14px 0 4px; color: var(--teal-bright); font-size: var(--t-xs); font-weight: 700; border-bottom: 1px solid var(--line); }
 .fixture-bouts { font-size: var(--t-s); padding-bottom: 6px; }
 .fixture-bouts .bout { padding: 6px 0; }
 .fixture-bouts .bout-score { font-size: var(--t-m); }
