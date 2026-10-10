@@ -18,7 +18,7 @@ window.LEAGUE_CONFIG = {
     copyrightUrl: "https://www.facebook.com/gamingundergroundmarket",
     credits: [
       { label: "Statistics by", name: "GUM Technical" },
-      { label: "Built by", name: "Imperial DevStar", url: "#" },
+      { label: "Built by", name: "Imperial DevStar", url: "https://lrvelasquez.vercel.app/" },
     ],
   },
 
