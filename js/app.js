@@ -475,7 +475,40 @@
     };
     const r = m.result;
     const mid = !r ? '<span class="fixture-vs">vs</span>' : r.byDefault ? '<span class="fixture-vs">Default</span>' : `<b class="fixture-score">${r.bouts1}–${r.bouts2}</b>`;
-    return `<li class="fixture">${side(m.team1)}${mid}${side(m.team2)}</li>`;
+    const bouts = (m.bouts || []).map((b) => boutRow(b, 1, m.team1, m.team2)).join("");
+    return `<li class="fixture">${side(m.team1)}${mid}${side(m.team2)}</li>${bouts ? `<li class="fixture-bouts">${bouts}</li>` : ""}`;
+  }
+
+  // One battle between two bladers, from side `mine`'s point of view, with a dot per round.
+  function boutRow(b, mine, myTeam, oppTeam) {
+    const me = playerOrUnknown(mine === 1 ? b.p1 : b.p2);
+    const them = playerOrUnknown(mine === 1 ? b.p2 : b.p1);
+    const a = mine === 1 ? b.p1Pts : b.p2Pts;
+    const z = mine === 1 ? b.p2Pts : b.p1Pts;
+    const outcome = a > z ? "win" : a < z ? "loss" : "draw";
+    const rounds = (b.rounds || [])
+      .map((rd) => {
+        const info = FINISHES[rd.finish];
+        const ours = rd.winner === mine;
+        return `<span class="${ours ? "" : "theirs"}" style="--sw:${info ? info.color : "var(--ash)"}" title="${esc(`${ours ? me.name : them.name} won by ${info ? info.long.toLowerCase() : rd.finish}`)}"></span>`;
+      })
+      .join("");
+    return `
+      <div class="bout">
+        <div class="bout-side">
+          <span class="bout-player" ${me.key ? `data-open-player="${esc(me.key)}"` : ""}>${esc(me.name)}</span>
+          <span class="bout-team">${esc(myTeam)}</span>
+        </div>
+        <div class="bout-center">
+          <span class="bout-score">${a}–${z}</span>
+          <div class="bout-rounds">${rounds}</div>
+          <span class="outcome ${outcome}">${outcome === "win" ? "Win" : outcome === "loss" ? "Loss" : "Draw"}</span>
+        </div>
+        <div class="bout-side right">
+          <span class="bout-player" ${them.key ? `data-open-player="${esc(them.key)}"` : ""}>${esc(them.name)}</span>
+          <span class="bout-team">${esc(oppTeam)}</span>
+        </div>
+      </div>`;
   }
 
   function renderHero() {
@@ -1241,38 +1274,7 @@
         const oppPts = mine === 1 ? r.pts2 : r.pts1;
         const won = r.winner === t.name;
 
-        const bouts = m.bouts
-          .map((b) => {
-            const me = playerOrUnknown(mine === 1 ? b.p1 : b.p2);
-            const them = playerOrUnknown(mine === 1 ? b.p2 : b.p1);
-            const a = mine === 1 ? b.p1Pts : b.p2Pts;
-            const z = mine === 1 ? b.p2Pts : b.p1Pts;
-            const outcome = a > z ? "win" : a < z ? "loss" : "draw";
-            const rounds = (b.rounds || [])
-              .map((rd) => {
-                const info = FINISHES[rd.finish];
-                const ours = rd.winner === mine;
-                return `<span class="${ours ? "" : "theirs"}" style="--sw:${info ? info.color : "var(--ash)"}" title="${esc(`${ours ? me.name : them.name} won by ${info ? info.long.toLowerCase() : rd.finish}`)}"></span>`;
-              })
-              .join("");
-            return `
-              <div class="bout">
-                <div class="bout-side">
-                  <span class="bout-player" ${me.key ? `data-open-player="${esc(me.key)}"` : ""}>${esc(me.name)}</span>
-                  <span class="bout-team">${esc(t.name)}</span>
-                </div>
-                <div class="bout-center">
-                  <span class="bout-score">${a}–${z}</span>
-                  <div class="bout-rounds">${rounds}</div>
-                  <span class="outcome ${outcome}">${outcome === "win" ? "Win" : outcome === "loss" ? "Loss" : "Draw"}</span>
-                </div>
-                <div class="bout-side right">
-                  <span class="bout-player" ${them.key ? `data-open-player="${esc(them.key)}"` : ""}>${esc(them.name)}</span>
-                  <span class="bout-team">${esc(opp)}</span>
-                </div>
-              </div>`;
-          })
-          .join("");
+        const bouts = m.bouts.map((b) => boutRow(b, mine, t.name, opp)).join("");
 
         return `
           <div class="encounter ${won ? "won" : "lost"}" id="enc-${i}">
