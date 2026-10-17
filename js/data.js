@@ -11,7 +11,7 @@ window.LEAGUE_CONFIG = {
   shortName: "GW",
   season: 1,
   venue: "Main Event Hall — doors open 9:00 AM",
-  socialUrl: "https://www.facebook.com/",
+  socialUrl: "https://www.facebook.com/gumverseofficial",
   socialLabel: "Facebook",
   footer: {
     copyright: "Gaming Underground Market",
