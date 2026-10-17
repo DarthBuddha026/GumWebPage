@@ -1286,6 +1286,7 @@ a { color: inherit; }
 /* Guild EXP: a season bar with a marker per guild skill */
 .guild-exp { margin: 0 0 20px; }
 .guild-exp h5 { display: flex; justify-content: space-between; align-items: baseline; }
+.guild-exp .exp-sources + h5 { margin-top: 20px; }
 .exp-total { font-weight: 600; font-variant-numeric: tabular-nums; }
 .exp-total small { color: var(--ash); font-weight: 400; font-size: var(--t-s); }
 .exp-track { position: relative; }

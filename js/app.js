@@ -1050,32 +1050,43 @@
     animateMeters($("#roster-view"));
   }
 
-  // The guild's season EXP bar, ending at the admin's EXP cap, with a marker per guild skill. Hidden until the admin sets up skills.
+  // Two bars on the guild profile: Guild EXP (gains only, ends at the admin's cap) and Guild Skill EXP
+  // (can drop, ends at the last skill, with a marker per skill). Each shows once the admin sets it up.
   function guildExpBlock(t) {
     const skills = state.expSkills;
-    if (!skills.length || !t.xp) return "";
+    const cap = state.expCap;
     const x = t.xp;
-    const max = state.expCap || skills.at(-1).exp;
+    if (!x || (!cap && !skills.length)) return "";
     const fmt = (n) => n.toLocaleString();
     const signedFmt = (n) => (n > 0 ? `+${fmt(n)}` : fmt(n));
-    const marks = skills.map((s, i) => `<span class="exp-mark ${i < x.unlocked ? "unlocked" : ""}" style="left:${(s.exp / max) * 100}%" aria-hidden="true"></span>`).join("");
-    const list = skills
-      .map(
-        (s, i) => `
-        <li class="skill ${i < x.unlocked ? "unlocked" : ""}">
-          <i class="fas ${i < x.unlocked ? "fa-lock-open" : "fa-lock"}" aria-hidden="true"></i>
-          <span class="skill-text"><b>${esc(s.name)}</b>${s.description ? `<span>${esc(s.description)}</span>` : ""}</span>
-          <span class="skill-exp">${fmt(s.exp)} EXP</span>
-        </li>`
-      )
-      .join("");
+    const sources = (p) => `<p class="exp-sources">Siege ${signedFmt(p.siege)} · Raids ${signedFmt(p.raids)} · Achievements ${signedFmt(p.achievements)}</p>`;
+    const bar = (title, value, max, color, marks = "") => `
+      <h5>${title} <span class="exp-total">${fmt(value)} <small>/ ${fmt(max)}</small></span></h5>
+      <div class="exp-track">${meter(value / max, { color })}${marks}</div>`;
+
+    let skillPart = "";
+    if (skills.length) {
+      const top = skills.at(-1).exp;
+      const on = (i) => i < x.unlocked;
+      const marks = skills.map((s, i) => `<span class="exp-mark ${on(i) ? "unlocked" : ""}" style="left:${(s.exp / top) * 100}%" aria-hidden="true"></span>`).join("");
+      const list = skills
+        .map(
+          (s, i) => `
+          <li class="skill ${on(i) ? "unlocked" : ""}">
+            <i class="fas ${on(i) ? "fa-lock-open" : "fa-lock"}" aria-hidden="true"></i>
+            <span class="skill-text"><b>${esc(s.name)}</b>${s.description ? `<span>${esc(s.description)}</span>` : ""}</span>
+            <span class="skill-exp">${fmt(s.exp)} Skill EXP</span>
+          </li>`
+        )
+        .join("");
+      skillPart = bar("Guild Skill EXP", x.skillExp, top, "var(--teal)", marks) + sources(x.skill) + `<ul class="skills">${list}</ul>`;
+    }
+
     const awards = x.awards.filter((a) => !a.player);
     return `
       <div class="stat-block guild-exp">
-        <h5>Guild EXP <span class="exp-total">${fmt(x.exp)} <small>/ ${fmt(max)}</small></span></h5>
-        <div class="exp-track">${meter(x.exp / max, { color: "var(--pink)" })}${marks}</div>
-        <p class="exp-sources">Siege ${signedFmt(x.siege)} · Raids ${signedFmt(x.raids)} · Achievements ${signedFmt(x.achievements)}</p>
-        <ul class="skills">${list}</ul>
+        ${cap ? bar("Guild EXP", x.exp, cap, "var(--pink)") + sources(x.guild) : ""}
+        ${skillPart}
         ${awards.length ? `<div class="achievements">${awards.map((a) => `<span class="achievement"><i class="fas fa-medal" aria-hidden="true"></i>${esc(a.name)}</span>`).join("")}</div>` : ""}
       </div>`;
   }

@@ -63,38 +63,46 @@ window.LEAGUE_CONFIG = {
     return rounds;
   }
 
-  // Each guild's season EXP from the admin's EXP document (cap, rules, skills, achievements, awards, raids).
-  // weeks: [{ id, label }] in schedule order; winners: [{ weekId, winner, loser }] for decided sieges;
-  // playerTeam: Map of blader key -> guild name. EXP is applied one match day at a time: it never goes
-  // below 0, never below the EXP of a skill the guild has already unlocked, and never above the cap.
-  // ponytail: the floor is checked per match day, not per event; split days into events if that matters.
+  // Each guild's season EXP from the admin's EXP document. Every event gives two amounts:
+  // Guild EXP (`rules`, achievements' `exp`): gains only, never drops, capped at `cap`.
+  // Guild Skill EXP (`skillRules`, achievements' `skillExp`): takes penalties, stays between 0 and the
+  // last skill's EXP, and a skill is unlocked only while Skill EXP is at or above its threshold.
+  // weeks: [{ id }] in schedule order; winners: [{ weekId, winner, loser }] for decided sieges;
+  // playerTeam: Map of blader key -> guild name. Totals are clamped once per match day.
+  // ponytail: clamping is per match day, not per event; split days into events if that matters.
   function guildExp(guildNames, weeks, winners, exp, playerTeam) {
-    const rules = exp.rules || {};
     const skills = (exp.skills || []).slice().sort((a, b) => a.exp - b.exp);
     const cap = exp.cap > 0 ? exp.cap : Infinity;
+    const skillTop = skills.length ? skills.at(-1).exp : Infinity;
     const achById = new Map((exp.achievements || []).map((a) => [a.id, a]));
-    const out = new Map(guildNames.map((g) => [g, { exp: 0, siege: 0, raids: 0, achievements: 0, unlocked: 0, awards: [] }]));
+    const parts = () => ({ siege: 0, raids: 0, achievements: 0 });
+    const out = new Map(guildNames.map((g) => [g, { exp: 0, skillExp: 0, unlocked: 0, guild: parts(), skill: parts(), awards: [] }]));
 
     weeks.forEach((w) => {
       const delta = new Map();
-      const add = (guild, part, n) => {
+      // rule: a key in rules/skillRules, or an achievement { exp, skillExp }.
+      const add = (guild, part, rule) => {
         const g = out.get(guild);
-        if (!g || !n) return;
-        g[part] += n;
-        delta.set(guild, (delta.get(guild) || 0) + n);
+        if (!g) return;
+        const gain = Math.max(0, (typeof rule === "string" ? exp.rules?.[rule] : rule.exp) || 0);
+        const skill = (typeof rule === "string" ? exp.skillRules?.[rule] : rule.skillExp) || 0;
+        g.guild[part] += gain;
+        g.skill[part] += skill;
+        const d = delta.get(guild) || [0, 0];
+        delta.set(guild, [d[0] + gain, d[1] + skill]);
       };
 
       winners.filter((m) => m.weekId === w.id).forEach((m) => {
-        add(m.winner, "siege", rules.siegeWin);
-        add(m.loser, "siege", rules.siegeLoss);
+        add(m.winner, "siege", "siegeWin");
+        add(m.loser, "siege", "siegeLoss");
       });
 
       const raid = (exp.raids || {})[w.id];
       if (raid) {
-        if (raid.attended.length) guildNames.forEach((g) => add(g, "raids", raid.attended.includes(g) ? rules.raidAttend : rules.raidMissed));
+        if (raid.attended.length) guildNames.forEach((g) => add(g, "raids", raid.attended.includes(g) ? "raidAttend" : "raidMissed"));
         raid.battles.forEach((b) => {
-          add(playerTeam.get(b.winner === 1 ? b.p1 : b.p2), "raids", rules.raidBattleWin);
-          add(playerTeam.get(b.winner === 1 ? b.p2 : b.p1), "raids", rules.raidBattleLoss);
+          add(playerTeam.get(b.winner === 1 ? b.p1 : b.p2), "raids", "raidBattleWin");
+          add(playerTeam.get(b.winner === 1 ? b.p2 : b.p1), "raids", "raidBattleLoss");
         });
       }
 
@@ -102,16 +110,18 @@ window.LEAGUE_CONFIG = {
         const ach = achById.get(a.achievementId);
         const guild = a.guild || playerTeam.get(a.player);
         if (!ach || !out.has(guild)) return;
-        add(guild, "achievements", ach.exp);
-        out.get(guild).awards.push({ name: ach.name, exp: ach.exp, player: a.player || null });
+        add(guild, "achievements", ach);
+        out.get(guild).awards.push({ name: ach.name, exp: ach.exp, skillExp: ach.skillExp || 0, player: a.player || null });
       });
 
-      out.forEach((g, name) => {
-        const floor = g.unlocked ? skills[g.unlocked - 1].exp : 0;
-        g.exp = Math.min(cap, Math.max(floor, g.exp + (delta.get(name) || 0)));
-        while (g.unlocked < skills.length && g.exp >= skills[g.unlocked].exp) g.unlocked++;
+      delta.forEach(([gain, skill], name) => {
+        const g = out.get(name);
+        g.exp = Math.min(cap, g.exp + gain);
+        g.skillExp = Math.min(skillTop, Math.max(0, g.skillExp + skill));
       });
     });
+
+    out.forEach((g) => (g.unlocked = skills.filter((s) => g.skillExp >= s.exp).length));
     return out;
   }
 
