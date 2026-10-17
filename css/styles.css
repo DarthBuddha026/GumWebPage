@@ -131,18 +131,13 @@ a { color: inherit; }
 
 /* ---------- Logo ---------- */
 
-.hud-logo, .hero-logo, .loader-logo { display: block; height: auto; }
+.hud-logo, .hero-logo { display: block; height: auto; }
 
-/* The one orchestrated moment: the logo pops in as the loader clears. */
-.dashboard.ready .hero-logo { animation: logo-pop 0.9s cubic-bezier(0.18, 1.4, 0.4, 1) both; }
-.loader-logo { animation: logo-bob 1.6s ease-in-out infinite; }
+/* The one orchestrated moment: the logo pops in as the page opens. */
+.hero-logo { animation: logo-pop 0.9s cubic-bezier(0.18, 1.4, 0.4, 1) both; }
 
 @keyframes logo-pop {
   from { opacity: 0; transform: scale(0.7) rotate(-6deg); }
-}
-
-@keyframes logo-bob {
-  50% { transform: translateY(-6px) scale(1.02); }
 }
 
 /* ---------- Buttons ---------- */
@@ -208,34 +203,24 @@ a { color: inherit; }
   justify-content: center;
   gap: 16px;
   background: var(--black);
-  transition: opacity 0.3s ease;
 }
+#loader:not(.failed) { display: none; }
 
-.loader-logo { width: min(240px, 56vw); }
-.loader-title {
-  font-family: var(--font-title);
-  font-weight: 700;
-  font-size: var(--t-2xl);
-  letter-spacing: -0.035em;
-  line-height: 1;
-  color: var(--bone);
-}
-.loader-bar {
-  width: min(220px, 60vw);
-  height: 3px;
-  overflow: hidden;
-  background: var(--line);
-}
-/* Fills over the loader's minimum on-screen time (MIN_LOADER_MS in app.js). */
-.loader-bar span {
+/* Skeleton placeholders, replaced by the real content once the league data loads. */
+.skel {
   display: block;
-  height: 100%;
-  background: linear-gradient(90deg, var(--pink), var(--teal));
-  transform-origin: left;
-  animation: loader-fill 1.5s cubic-bezier(0.4, 0, 0.2, 1) both;
+  border-radius: 4px;
+  background: linear-gradient(90deg, rgba(255, 255, 255, 0.04) 30%, rgba(255, 255, 255, 0.1) 50%, rgba(255, 255, 255, 0.04) 70%) 0 0 / 300% 100%;
+  animation: skel-shimmer 1.4s linear infinite;
 }
-@keyframes loader-fill { from { transform: scaleX(0); } }
-.loading-text { color: var(--ash); font-size: var(--t-s); }
+@keyframes skel-shimmer { from { background-position: 100% 0; } to { background-position: 0 0; } }
+.skel-line { height: 0.9em; margin: 0.35em 0; }
+.skel-row { height: 56px; margin-bottom: 8px; list-style: none; }
+.skel-block { grid-column: 1 / -1; height: 220px; }
+.skel-pill { width: 96px; height: 36px; border-radius: 999px; }
+.skel-node { width: 44px; height: 44px; border-radius: 10px; }
+.stage .skel-line { width: 70%; margin-top: 12px; }
+
 .load-error { color: var(--pink); text-align: center; max-width: 36ch; }
 
 /* ---------- Header ---------- */

@@ -27,7 +27,7 @@ The scripts load in order with `defer`. Each file is an IIFE that communicates t
 
 ### Data source
 
-All league data (guilds, bladers, the schedule and results) comes from the admin's `/api/league` (`CFG.leagueUrl`). The site has no sample or fallback data. `fetchLeague()` tries twice with a 10s timeout each; if both fail, the loader shows an error. The API sends `Access-Control-Allow-Origin: *`, so opening `index.html` from disk also works for a quick check.
+All league data (guilds, bladers, the schedule and results) comes from the admin's `/api/league` (`CFG.leagueUrl`). The site has no sample or fallback data. `fetchLeague()` tries twice with a 10s timeout each; if both fail, a full-screen error replaces the page. While loading, the containers in `index.html` show `.skel` skeleton placeholders that the renders overwrite. The API sends `Access-Control-Allow-Origin: *`, so opening `index.html` from disk also works for a quick check.
 
 `leagueToRaw()` converts the admin's `{season, results, guilds, players}` into the raw shape that `buildModel()` uses. Only matches with `status: "final"` (bouts) or `"default"` (forfeit winner) count. Image refs that start with `/api/` are rewritten to absolute URLs on the admin's domain.
 

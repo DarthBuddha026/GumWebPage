@@ -776,6 +776,7 @@
   }
 
   function renderMap() {
+    $("#location-map").classList.remove("skel");
     if (!window.L) {
       $("#location-map").innerHTML = `<div class="empty-state"><i class="fas fa-map"></i><h4>The map couldn't load</h4><p>Check your connection and reload the page.</p></div>`;
       return;
@@ -1492,20 +1493,6 @@
   // Boot
   // ---------------------------------------------------------------------------
 
-  // Keep the loading screen up long enough to read, even when data is instant.
-  const MIN_LOADER_MS = 600;
-  const bootStart = performance.now();
-
-  function hideLoader() {
-    const wait = Math.max(0, MIN_LOADER_MS - (performance.now() - bootStart));
-    setTimeout(() => {
-      const loader = $("#loader");
-      loader.style.opacity = "0";
-      $("#dashboard").classList.add("ready");
-      setTimeout(() => (loader.style.display = "none"), 300);
-    }, wait);
-  }
-
   async function init() {
     bindEvents();
     bindTooltip();
@@ -1517,9 +1504,11 @@
       renderDashboard();
       makeRowsFocusable();
       new MutationObserver(makeRowsFocusable).observe(document.body, { childList: true, subtree: true });
-      hideLoader();
+      $("#dashboard").classList.add("ready");
     } catch (err) {
       console.error(err);
+      // The page shows skeletons while loading; the full-screen loader only appears to report a failure.
+      $("#loader").classList.add("failed");
       $("#loader").innerHTML = `<div class="load-error"><i class="fas fa-triangle-exclamation" aria-hidden="true"></i><br>The dashboard couldn't load. ${esc(err.message)}</div>`;
     }
   }

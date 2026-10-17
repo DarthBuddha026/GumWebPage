@@ -23,13 +23,8 @@
 
 <body>
 
-  <!-- Loader -->
-  <div id="loader" role="status">
-    <img class="loader-logo" src="images/gum-logo.webp" width="600" height="520" alt="GUM by Gaming Underground Market">
-    <div class="loader-title" data-bind="brandName">GUM Guild Wars</div>
-    <div class="loader-bar" aria-hidden="true"><span></span></div>
-    <div class="loading-text">Loading the guild hall…</div>
-  </div>
+  <!-- Shown only if the league data fails to load; the page uses skeletons while loading. -->
+  <div id="loader" role="alert"></div>
 
   <!-- Header -->
   <header class="hud">
@@ -57,12 +52,12 @@
     <section class="hero" aria-labelledby="hero-title">
       <div class="hero-text">
         <h1 id="hero-title" class="hero-title" data-bind="brandName">GUM Guild Wars</h1>
-        <p class="hero-status" id="hero-status">Loading the season…</p>
-        <p class="hero-updated" id="update-time"></p>
+        <p class="hero-status" id="hero-status"><span class="skel skel-line" style="width:90%"></span><span class="skel skel-line" style="width:60%"></span></p>
+        <p class="hero-updated" id="update-time"><span class="skel skel-line" style="width:12em"></span></p>
       </div>
       <img class="hero-logo" src="images/ggw2-logo.webp" width="1000" height="647" alt="GGW2: GUM Guild Wars">
 
-      <ol class="season-path" id="progress-container" aria-label="Season progress by week"></ol>
+      <ol class="season-path" id="progress-container" aria-label="Season progress by week"><li class="stage"><span class="skel skel-node"></span><span class="skel skel-line"></span></li><li class="stage"><span class="skel skel-node"></span><span class="skel skel-line"></span></li><li class="stage"><span class="skel skel-node"></span><span class="skel skel-line"></span></li><li class="stage"><span class="skel skel-node"></span><span class="skel skel-line"></span></li><li class="stage"><span class="skel skel-node"></span><span class="skel skel-line"></span></li><li class="stage"><span class="skel skel-node"></span><span class="skel skel-line"></span></li></ol>
       <p class="season-caption" id="season-caption"></p>
     </section>
 
@@ -72,7 +67,7 @@
         <h2 id="ranking-title" class="section-title">Guild Ranking</h2>
         <p class="section-note">The top guilds in the league, best record first.</p>
       </div>
-      <ol id="team-leaderboard" class="ranking"></ol>
+      <ol id="team-leaderboard" class="ranking"><li class="skel skel-row"></li><li class="skel skel-row"></li><li class="skel skel-row"></li><li class="skel skel-row"></li><li class="skel skel-row"></li></ol>
     </section>
 
     <!-- Top bladers -->
@@ -82,8 +77,8 @@
         <p class="section-note">Ranked by MVP score. To qualify, a blader needs <span data-bind="minGames">3</span> games and at least half of their guild's matches.</p>
       </div>
       <div class="party">
-        <article id="mvp-hero" class="char-sheet"></article>
-        <ol id="mvp-list" class="party-list" start="2"></ol>
+        <article id="mvp-hero" class="char-sheet"><div class="skel skel-block"></div></article>
+        <ol id="mvp-list" class="party-list" start="2"><li class="skel skel-row"></li><li class="skel skel-row"></li><li class="skel skel-row"></li><li class="skel skel-row"></li></ol>
       </div>
     </section>
 
@@ -93,7 +88,7 @@
         <h2 id="titles-title" class="section-title">Season Titles</h2>
         <p class="section-note">Held by whoever leads each record right now. Per-game titles only count qualified bladers.</p>
       </div>
-      <dl class="titles" id="titles-list"></dl>
+      <dl class="titles" id="titles-list"><div class="skel skel-row"></div><div class="skel skel-row"></div><div class="skel skel-row"></div><div class="skel skel-row"></div></dl>
     </section>
 
     <!-- How battles end + finish leaders -->
@@ -102,11 +97,11 @@
         <h2 id="meta-title" class="section-title">How Battles End</h2>
         <p class="section-note">Every round won this season, by the finish that won it.</p>
       </div>
-      <div class="meta-bar" id="meta-bar" role="img"></div>
-      <ul class="meta-legend" id="meta-legend"></ul>
+      <div class="meta-bar" id="meta-bar" role="img"><span class="skel" style="flex:1"></span></div>
+      <ul class="meta-legend" id="meta-legend"><li><span class="skel skel-line" style="width:7em"></span></li><li><span class="skel skel-line" style="width:7em"></span></li><li><span class="skel skel-line" style="width:7em"></span></li><li><span class="skel skel-line" style="width:7em"></span></li></ul>
 
       <h3 class="subsection-title">Finish Leaders</h3>
-      <div class="command-tabs" id="finish-pills" role="tablist" aria-label="Finish type"></div>
+      <div class="command-tabs" id="finish-pills" role="tablist" aria-label="Finish type"><span class="skel skel-pill"></span><span class="skel skel-pill"></span><span class="skel skel-pill"></span><span class="skel skel-pill"></span></div>
 
       <div class="table-pair">
         <div class="panel">
@@ -114,7 +109,7 @@
           <div class="table-wrap">
             <table class="data-table">
               <thead><tr><th class="col-rank">Rank</th><th>Blader</th><th class="num" data-finish-label>Per game</th></tr></thead>
-              <tbody id="overall-finish-body"></tbody>
+              <tbody id="overall-finish-body"><tr><td colspan="3"><span class="skel skel-line"></span></td></tr><tr><td colspan="3"><span class="skel skel-line"></span></td></tr><tr><td colspan="3"><span class="skel skel-line"></span></td></tr><tr><td colspan="3"><span class="skel skel-line"></span></td></tr><tr><td colspan="3"><span class="skel skel-line"></span></td></tr></tbody>
             </table>
           </div>
         </div>
@@ -123,7 +118,7 @@
           <div class="table-wrap">
             <table class="data-table">
               <thead><tr><th class="col-rank">Rank</th><th>Blader</th><th class="num" data-finish-label>Per game</th></tr></thead>
-              <tbody id="weekly-finish-body"></tbody>
+              <tbody id="weekly-finish-body"><tr><td colspan="3"><span class="skel skel-line"></span></td></tr><tr><td colspan="3"><span class="skel skel-line"></span></td></tr><tr><td colspan="3"><span class="skel skel-line"></span></td></tr><tr><td colspan="3"><span class="skel skel-line"></span></td></tr><tr><td colspan="3"><span class="skel skel-line"></span></td></tr></tbody>
             </table>
           </div>
         </div>
@@ -136,7 +131,7 @@
         <h2 id="map-title" class="section-title">Guild Territories</h2>
         <p class="section-note">Each logo marks a guild's home base. Select one to see its record.</p>
       </div>
-      <div id="location-map" class="map"></div>
+      <div id="location-map" class="map skel"></div>
     </section>
 
   </main>
