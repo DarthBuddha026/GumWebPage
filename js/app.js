@@ -189,7 +189,7 @@
     const weekLabel = new Map(season.weeks.map((w) => [w.id, w.label]));
     const matches = season.matches.map((m) => {
       const r = results[m.id];
-      const base = { id: m.id, week: weekLabel.get(m.weekId), bracket: bracketOf.get(m.team1) || "A", round: m.round, team1: m.team1, team2: m.team2, bouts: [] };
+      const base = { id: m.id, weekId: m.weekId, week: weekLabel.get(m.weekId), bracket: bracketOf.get(m.team1) || "A", round: m.round, team1: m.team1, team2: m.team2, bouts: [] };
       if (r?.status === "final") base.bouts = r.bouts.map(({ p1, p2, p1Pts, p2Pts, rounds }) => ({ p1, p2, p1Pts, p2Pts, rounds }));
       if (r?.status === "default") base.defaultWinner = r.defaultWinner === 1 ? m.team1 : m.team2;
       return base;
@@ -202,7 +202,7 @@
         const inWeek = matches.filter((m) => m.week === w.label);
         const done = inWeek.filter((m) => m.bouts.length || m.defaultWinner).length;
         // Weeks without fixtures (openings, raids) are complete once the admin marks them done.
-        return { label: w.label, date: w.date, progress: inWeek.length ? Math.round((done / inWeek.length) * 100) : w.done ? 100 : 0 };
+        return { id: w.id, label: w.label, date: w.date, progress: inWeek.length ? Math.round((done / inWeek.length) * 100) : w.done ? 100 : 0 };
       });
 
     return {
@@ -211,6 +211,7 @@
       teams: league.guilds,
       players: league.players.map((p) => ({ ...p, achievements: p.achievements || [] })),
       matches,
+      exp: league.exp || {},
     };
   }
 
@@ -350,6 +351,14 @@
       p.winRate = p.overall.winRate;
       p.ptDiff = p.overall.ptDiff;
     });
+
+    // Guild EXP, from siege winners, Grand Raids and awarded achievements (see leagueTools.guildExp in data.js).
+    const winners = raw.matches.filter((m) => m.result).map((m) => ({ weekId: m.weekId, winner: m.result.winner, loser: m.result.winner === m.team1 ? m.team2 : m.team1 }));
+    const exp = window.leagueTools.guildExp(teams.map((t) => t.name), raw.weeks || [], winners, raw.exp || {}, new Map(players.map((p) => [p.key, p.team])));
+    teams.forEach((t) => (t.xp = exp.get(t.name)));
+    // Awarded individual achievements also show on the blader's profile.
+    exp.forEach((g) => g.awards.forEach((a) => a.player && playersByKey.get(a.player)?.achievements.push(a.name)));
+    state.expSkills = (raw.exp?.skills || []).slice().sort((a, b) => a.exp - b.exp);
 
     state.teams = teams.slice().sort(teamSort);
     state.teamsByName = teamsByName;
@@ -1034,7 +1043,39 @@
             <button class="btn-secondary" data-history-team="${esc(t.name)}"><i class="fas fa-scroll" aria-hidden="true"></i> Battle log</button>
           </div>
         </div>
+        ${guildExpBlock(t)}
         ${roster.map((p) => bladerCard(p, false)).join("") || emptyState("fa-user-slash", "No bladers on this guild", "Bladers appear here once they're registered.")}
+      </div>`;
+    animateMeters($("#roster-view"));
+  }
+
+  // The guild's season EXP bar with a marker per guild skill. Hidden until the admin sets up skills.
+  function guildExpBlock(t) {
+    const skills = state.expSkills;
+    if (!skills.length || !t.xp) return "";
+    const x = t.xp;
+    const max = skills.at(-1).exp;
+    const fmt = (n) => n.toLocaleString();
+    const signedFmt = (n) => (n > 0 ? `+${fmt(n)}` : fmt(n));
+    const marks = skills.map((s, i) => `<span class="exp-mark ${i < x.unlocked ? "unlocked" : ""}" style="left:${(s.exp / max) * 100}%" aria-hidden="true"></span>`).join("");
+    const list = skills
+      .map(
+        (s, i) => `
+        <li class="skill ${i < x.unlocked ? "unlocked" : ""}">
+          <i class="fas ${i < x.unlocked ? "fa-lock-open" : "fa-lock"}" aria-hidden="true"></i>
+          <span class="skill-text"><b>${esc(s.name)}</b>${s.description ? `<span>${esc(s.description)}</span>` : ""}</span>
+          <span class="skill-exp">${fmt(s.exp)} EXP</span>
+        </li>`
+      )
+      .join("");
+    const awards = x.awards.filter((a) => !a.player);
+    return `
+      <div class="stat-block guild-exp">
+        <h5>Guild EXP <span class="exp-total">${fmt(x.exp)} <small>/ ${fmt(max)}</small></span></h5>
+        <div class="exp-track">${meter(x.exp / max, { color: "var(--pink)" })}${marks}</div>
+        <p class="exp-sources">Siege ${signedFmt(x.siege)} · Raids ${signedFmt(x.raids)} · Achievements ${signedFmt(x.achievements)}</p>
+        <ul class="skills">${list}</ul>
+        ${awards.length ? `<div class="achievements">${awards.map((a) => `<span class="achievement"><i class="fas fa-medal" aria-hidden="true"></i>${esc(a.name)}</span>`).join("")}</div>` : ""}
       </div>`;
   }
 
