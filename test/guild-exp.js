@@ -35,7 +35,7 @@ assert.strictEqual(A.unlocked, 0);
 // B Skill EXP: w1 defend loss -30 stops at 0, w2 raid battle win +10, w3 -100 stops at 0, w4 two successful targets +140.
 assert.strictEqual(B.skillExp, 140);
 assert.strictEqual(B.unlocked, 2);
-// B Guild EXP: 5 -> 10 -> 40 -> 280 (two successful targets, no Attack Win on top), under the 300 cap.
+// B Guild EXP: 5 -> 10 -> 40 -> 280 (two successful targets, no Attack Win on top).
 assert.strictEqual(B.exp, 280);
 assert.deepStrictEqual(B.awards, [{ name: "Rash", exp: 30, skillExp: -100, player: "pb" }]);
 
@@ -46,9 +46,9 @@ assert.strictEqual(d.get("A").skillExp, 50);
 assert.strictEqual(d.get("B").exp, 10);
 assert.strictEqual(d.get("B").skillExp, 0);
 
-// The cap holds Guild EXP; Skill EXP stops at the last skill (150).
+// Guild EXP has no limit: the required Guild EXP (cap) only marks where the bar is full. Skill EXP stops at the last skill (150).
 const more = guildExp(["A", "B"], weeks, [...winners, { weekId: "w4", winner: "B", loser: "A", attacker: "B", target: true }], { ...exp, cap: 200 }, teams);
-assert.strictEqual(more.get("B").exp, 200);
+assert.strictEqual(more.get("B").exp, 400);
 assert.strictEqual(more.get("B").skillExp, 150);
 assert.strictEqual(more.get("B").unlocked, 3);
 

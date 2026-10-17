@@ -359,6 +359,7 @@
     // Awarded individual achievements also show on the blader's profile.
     exp.forEach((g) => g.awards.forEach((a) => a.player && playersByKey.get(a.player)?.achievements.push(a.name)));
     state.expSkills = (raw.exp?.skills || []).slice().sort((a, b) => a.exp - b.exp);
+    // The required Guild EXP: the Guild EXP bar is full here, but guilds keep earning past it.
     state.expCap = raw.exp?.cap || 0;
 
     state.teams = teams.slice().sort(teamSort);
@@ -1050,7 +1051,7 @@
     animateMeters($("#roster-view"));
   }
 
-  // Two bars on the guild profile: Guild EXP (gains only, ends at the admin's cap) and Guild Skill EXP
+  // Two bars on the guild profile: Guild EXP (gains only, full at the admin's required Guild EXP) and Guild Skill EXP
   // (can drop, ends at the last skill, with a marker per skill). Each shows once the admin sets it up.
   function guildExpBlock(t) {
     const skills = state.expSkills;

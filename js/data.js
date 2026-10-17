@@ -64,7 +64,8 @@ window.LEAGUE_CONFIG = {
   }
 
   // Each guild's season EXP from the admin's EXP document. Every event gives two amounts:
-  // Guild EXP (`rules`, achievements' `exp`): gains only, never drops, capped at `cap`.
+  // Guild EXP (`rules`, achievements' `exp`): gains only, never drops, no limit (`cap` is only the required
+  // Guild EXP, where the dashboard's bar is full).
   // Guild Skill EXP (`skillRules`, achievements' `skillExp`): takes penalties, stays between 0 and the
   // last skill's EXP, and a skill is unlocked only while Skill EXP is at or above its threshold.
   // weeks: [{ id }] in schedule order; winners: [{ weekId, winner, loser, attacker, target }] for decided sieges;
@@ -72,7 +73,6 @@ window.LEAGUE_CONFIG = {
   // ponytail: clamping is per match day, not per event; split days into events if that matters.
   function guildExp(guildNames, weeks, winners, exp, playerTeam) {
     const skills = (exp.skills || []).slice().sort((a, b) => a.exp - b.exp);
-    const cap = exp.cap > 0 ? exp.cap : Infinity;
     const skillTop = skills.length ? skills.at(-1).exp : Infinity;
     const achById = new Map((exp.achievements || []).map((a) => [a.id, a]));
     const parts = () => ({ siege: 0, raids: 0, achievements: 0 });
@@ -121,7 +121,7 @@ window.LEAGUE_CONFIG = {
 
       delta.forEach(([gain, skill], name) => {
         const g = out.get(name);
-        g.exp = Math.min(cap, g.exp + gain);
+        g.exp += gain;
         g.skillExp = Math.min(skillTop, Math.max(0, g.skillExp + skill));
       });
     });
