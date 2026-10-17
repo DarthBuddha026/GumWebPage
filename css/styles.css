@@ -50,6 +50,9 @@ html {
   text-size-adjust: 100%;
   overflow-x: hidden;
 }
+@media (prefers-reduced-motion: no-preference) {
+  html { scroll-behavior: smooth; }
+}
 
 body {
   margin: 0;
