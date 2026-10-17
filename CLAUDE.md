@@ -36,6 +36,8 @@ The **raw shape** is `{ updatedAt, weeks: [{label, date, progress}], teams, play
 ### Guild EXP
 The league response also carries `exp` (required Guild EXP in `cap`, `rules` and `skillRules`, up to 3 guild skills, achievements, awards and Grand Raid records, all edited in the admin's Guild EXP tab). Every event gives two amounts. **Guild EXP** only goes up and has no limit; the bar is full at the required Guild EXP. **Guild Skill EXP** takes the penalties, stays between 0 and the last skill's EXP, and a skill is unlocked only while Skill EXP is at or above its threshold (it re-locks if Skill EXP drops). `leagueTools.guildExp()` in `data.js` works both out one match day at a time in schedule order; its self-check is `node test/guild-exp.js`. `guildExpBlock()` in app.js draws both bars on the guild profile, each once the admin sets it up (a required Guild EXP, or skills).
 
+**Guild Quest badges** are defined in `CFG.guildQuests` (data.js; the admin reads the same list). The admin stores which guilds completed each quest in `exp.quests` (`{ questId: [guildName] }`), and `guildQuestBlock()` shows them under the roster as locked or unlocked. Keep quest `id`s stable when editing the text.
+
 ### Domain rules (in app.js)
 - The finish types are `spin` (shown as "Stamina"), `over`, `burst` and `extreme`. The `FINISHES` map at the top of app.js and the `--f-*` CSS variables must stay in sync with `CFG.finishPoints`.
 - To be ranked, a player needs `minGames` games **and** attendance of at least `eligibilityAttendance` of their guild's matches.

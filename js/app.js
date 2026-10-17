@@ -1047,12 +1047,37 @@
         </div>
         ${guildExpBlock(t)}
         ${roster.map((p) => bladerCard(p, false)).join("") || emptyState("fa-user-slash", "No bladers on this guild", "Bladers appear here once they're registered.")}
+        ${guildQuestBlock(t)}
       </div>`;
     animateMeters($("#roster-view"));
   }
 
   // Two bars on the guild profile: Guild EXP (gains only, full at the admin's required Guild EXP) and Guild Skill EXP
   // (can drop, ends at the last skill, with a marker per skill). Each shows once the admin sets it up.
+  // Guild Quest badges (CFG.guildQuests), unlocked once the admin marks the quest complete for this guild.
+  function guildQuestBlock(t) {
+    const quests = CFG.guildQuests || [];
+    if (!quests.length) return "";
+    const done = state.raw.exp?.quests || {};
+    const unlocked = quests.filter((q) => (done[q.id] || []).includes(t.name)).length;
+    const badges = quests
+      .map((q) => {
+        const on = (done[q.id] || []).includes(t.name);
+        return `
+        <li class="quest ${on ? "unlocked" : ""}">
+          <span class="quest-badge" aria-hidden="true"><i class="fas ${on ? esc(q.icon || "fa-medal") : "fa-lock"}"></i><b>${esc(q.numeral)}</b></span>
+          <span class="quest-text"><b>${esc(q.name)}</b><span>${esc(q.text)}</span></span>
+          <span class="quest-state">${on ? "Unlocked" : "Locked"}</span>
+        </li>`;
+      })
+      .join("");
+    return `
+      <div class="stat-block guild-quests">
+        <h5>Guild Quest Badges <span class="exp-total">${unlocked} <small>/ ${quests.length}</small></span></h5>
+        <ul class="quests">${badges}</ul>
+      </div>`;
+  }
+
   function guildExpBlock(t) {
     const skills = state.expSkills;
     const cap = state.expCap;

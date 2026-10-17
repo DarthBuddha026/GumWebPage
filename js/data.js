@@ -41,6 +41,16 @@ window.LEAGUE_CONFIG = {
   minGames: 3,
 
   map: { center: [13.84, 121.06], zoom: 11 },
+
+  // Guild Quest badges. Organizers mark which guilds completed each one in the admin's Guild EXP tab,
+  // keyed by `id`, so keep ids stable when editing the text.
+  guildQuests: [
+    { id: "q1", numeral: "I", name: "The Siegebound Oath", text: "Attend at least 3 of the 4 Guild Sieges.", icon: "fa-flag" },
+    { id: "q2", numeral: "II", name: "Assembly of the Grand Company", text: "At least 5 registered members of the same guild take part together in 1 Grand Raid.", icon: "fa-people-group" },
+    { id: "q3", numeral: "III", name: "Chronicle of the Guild", text: "Create an official guild roster introduction video and submit it to GUM.", icon: "fa-video" },
+    { id: "q4", numeral: "IV", name: "Trial of Fellowship", text: "At least 3 registered members of the same guild take part together in 2 separate Weekly Pods.", icon: "fa-handshake" },
+    { id: "q5", numeral: "V", name: "Fellowship Beyond the Arena", text: "Submit a presentable video of at least 3 minutes showing the guild bonding outside regular tournament play.", icon: "fa-campground" },
+  ],
 };
 
 // Shared with the league admin, which loads this file for its schedule generator.

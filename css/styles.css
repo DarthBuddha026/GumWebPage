@@ -1301,6 +1301,22 @@ a { color: inherit; }
 .skill.unlocked { color: var(--bone); }
 .skill.unlocked i { color: var(--teal-bright); }
 
+/* Guild Quest badges, under the roster */
+.guild-quests { margin-bottom: 8px; }
+.guild-quests h5 { display: flex; justify-content: space-between; align-items: baseline; }
+.quests { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.quest { display: grid; grid-template-columns: 52px minmax(0, 1fr) auto; align-items: center; gap: 12px; padding: 10px 12px; border: 1px solid var(--line); border-radius: 8px; corner-shape: bevel; color: var(--ash); font-size: var(--t-s); }
+.quest-badge { display: grid; place-items: center; width: 52px; height: 52px; border: 2px solid var(--line); border-radius: 12px; corner-shape: bevel; line-height: 1; }
+.quest-badge i { font-size: 1.1rem; }
+.quest-badge b { font-size: var(--t-xs); margin-top: -6px; }
+.quest-text b { display: block; color: var(--bone); font-weight: 600; }
+.quest-text span { display: block; font-size: var(--t-xs); }
+.quest-state { font-size: var(--t-xs); text-transform: uppercase; letter-spacing: 0.06em; }
+.quest.unlocked { border-color: var(--pink); }
+.quest.unlocked .quest-badge { border-color: var(--pink); background: rgba(255, 46, 136, 0.14); color: var(--pink); }
+.quest.unlocked .quest-state { color: var(--pink); font-weight: 600; }
+.quest:not(.unlocked) .quest-badge { opacity: 0.55; }
+
 /* Share preview */
 
 .share-overlay {
