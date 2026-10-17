@@ -353,7 +353,7 @@
     });
 
     // Guild EXP, from siege winners, Grand Raids and awarded achievements (see leagueTools.guildExp in data.js).
-    const winners = raw.matches.filter((m) => m.result).map((m) => ({ weekId: m.weekId, winner: m.result.winner, loser: m.result.winner === m.team1 ? m.team2 : m.team1 }));
+    const winners = raw.matches.filter((m) => m.result).map((m) => ({ weekId: m.weekId, winner: m.result.winner, loser: m.result.winner === m.team1 ? m.team2 : m.team1, attacker: m.team1, target: Boolean(m.target) }));
     const exp = window.leagueTools.guildExp(teams.map((t) => t.name), raw.weeks || [], winners, raw.exp || {}, new Map(players.map((p) => [p.key, p.team])));
     teams.forEach((t) => (t.xp = exp.get(t.name)));
     // Awarded individual achievements also show on the blader's profile.

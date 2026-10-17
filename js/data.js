@@ -67,7 +67,7 @@ window.LEAGUE_CONFIG = {
   // Guild EXP (`rules`, achievements' `exp`): gains only, never drops, capped at `cap`.
   // Guild Skill EXP (`skillRules`, achievements' `skillExp`): takes penalties, stays between 0 and the
   // last skill's EXP, and a skill is unlocked only while Skill EXP is at or above its threshold.
-  // weeks: [{ id }] in schedule order; winners: [{ weekId, winner, loser }] for decided sieges;
+  // weeks: [{ id }] in schedule order; winners: [{ weekId, winner, loser, attacker, target }] for decided sieges;
   // playerTeam: Map of blader key -> guild name. Totals are clamped once per match day.
   // ponytail: clamping is per match day, not per event; split days into events if that matters.
   function guildExp(guildNames, weeks, winners, exp, playerTeam) {
@@ -92,17 +92,22 @@ window.LEAGUE_CONFIG = {
         delta.set(guild, [d[0] + gain, d[1] + skill]);
       };
 
+      // The attacker is the fixture's first guild. A successful target is paid instead of Attack Win.
       winners.filter((m) => m.weekId === w.id).forEach((m) => {
-        add(m.winner, "siege", "siegeWin");
-        add(m.loser, "siege", "siegeLoss");
+        if (m.winner === m.attacker) {
+          add(m.winner, "siege", m.target ? "successfulTarget" : "attackWin");
+          add(m.loser, "siege", "defendLoss");
+        } else {
+          add(m.winner, "siege", "defendWin");
+          add(m.loser, "siege", "attackLoss");
+        }
       });
 
       const raid = (exp.raids || {})[w.id];
       if (raid) {
-        if (raid.attended.length) guildNames.forEach((g) => add(g, "raids", raid.attended.includes(g) ? "raidAttend" : "raidMissed"));
+        raid.attended.forEach((g) => add(g, "raids", "raidAttend"));
         raid.battles.forEach((b) => {
           add(playerTeam.get(b.winner === 1 ? b.p1 : b.p2), "raids", "raidBattleWin");
-          add(playerTeam.get(b.winner === 1 ? b.p2 : b.p1), "raids", "raidBattleLoss");
         });
       }
 
