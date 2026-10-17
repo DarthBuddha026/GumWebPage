@@ -1291,7 +1291,6 @@ a { color: inherit; }
 .exp-track { position: relative; }
 .exp-track .meter { height: 12px; }
 .exp-mark { position: absolute; top: -3px; width: 4px; height: 18px; margin-left: -2px; border-radius: 1px; background: var(--line); }
-.exp-mark:last-child { margin-left: -4px; }
 .exp-mark.unlocked { background: var(--teal-bright); }
 .exp-sources { margin: 8px 0 12px; color: var(--ash); font-size: var(--t-xs); font-variant-numeric: tabular-nums; }
 .skills { list-style: none; margin: 0 0 12px; padding: 0; }

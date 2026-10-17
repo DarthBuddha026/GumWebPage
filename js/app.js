@@ -359,6 +359,7 @@
     // Awarded individual achievements also show on the blader's profile.
     exp.forEach((g) => g.awards.forEach((a) => a.player && playersByKey.get(a.player)?.achievements.push(a.name)));
     state.expSkills = (raw.exp?.skills || []).slice().sort((a, b) => a.exp - b.exp);
+    state.expCap = raw.exp?.cap || 0;
 
     state.teams = teams.slice().sort(teamSort);
     state.teamsByName = teamsByName;
@@ -1049,12 +1050,12 @@
     animateMeters($("#roster-view"));
   }
 
-  // The guild's season EXP bar with a marker per guild skill. Hidden until the admin sets up skills.
+  // The guild's season EXP bar, ending at the admin's EXP cap, with a marker per guild skill. Hidden until the admin sets up skills.
   function guildExpBlock(t) {
     const skills = state.expSkills;
     if (!skills.length || !t.xp) return "";
     const x = t.xp;
-    const max = skills.at(-1).exp;
+    const max = state.expCap || skills.at(-1).exp;
     const fmt = (n) => n.toLocaleString();
     const signedFmt = (n) => (n > 0 ? `+${fmt(n)}` : fmt(n));
     const marks = skills.map((s, i) => `<span class="exp-mark ${i < x.unlocked ? "unlocked" : ""}" style="left:${(s.exp / max) * 100}%" aria-hidden="true"></span>`).join("");

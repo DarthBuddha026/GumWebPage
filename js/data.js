@@ -63,14 +63,15 @@ window.LEAGUE_CONFIG = {
     return rounds;
   }
 
-  // Each guild's season EXP from the admin's EXP document (rules, skills, achievements, awards, raids).
+  // Each guild's season EXP from the admin's EXP document (cap, rules, skills, achievements, awards, raids).
   // weeks: [{ id, label }] in schedule order; winners: [{ weekId, winner, loser }] for decided sieges;
   // playerTeam: Map of blader key -> guild name. EXP is applied one match day at a time: it never goes
-  // below 0, and never below the EXP of a skill the guild has already unlocked.
+  // below 0, never below the EXP of a skill the guild has already unlocked, and never above the cap.
   // ponytail: the floor is checked per match day, not per event; split days into events if that matters.
   function guildExp(guildNames, weeks, winners, exp, playerTeam) {
     const rules = exp.rules || {};
     const skills = (exp.skills || []).slice().sort((a, b) => a.exp - b.exp);
+    const cap = exp.cap > 0 ? exp.cap : Infinity;
     const achById = new Map((exp.achievements || []).map((a) => [a.id, a]));
     const out = new Map(guildNames.map((g) => [g, { exp: 0, siege: 0, raids: 0, achievements: 0, unlocked: 0, awards: [] }]));
 
@@ -107,7 +108,7 @@ window.LEAGUE_CONFIG = {
 
       out.forEach((g, name) => {
         const floor = g.unlocked ? skills[g.unlocked - 1].exp : 0;
-        g.exp = Math.max(floor, g.exp + (delta.get(name) || 0));
+        g.exp = Math.min(cap, Math.max(floor, g.exp + (delta.get(name) || 0)));
         while (g.unlocked < skills.length && g.exp >= skills[g.unlocked].exp) g.unlocked++;
       });
     });

@@ -30,4 +30,8 @@ assert.strictEqual(B.exp, 230);
 assert.strictEqual(B.unlocked, 1);
 assert.deepStrictEqual(B.awards, [{ name: "Ace", exp: 30, player: "pb" }]);
 
+// The cap stops EXP growing: B would reach 230 but is held at 200.
+const capped = guildExp(["A", "B"], weeks, winners, { ...exp, cap: 200 }, new Map([["pa", "A"], ["pb", "B"]]));
+assert.strictEqual(capped.get("B").exp, 200);
+
 console.log("guildExp ok");
