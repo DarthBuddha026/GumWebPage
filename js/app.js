@@ -1076,17 +1076,17 @@
           <li class="skill ${on(i) ? "unlocked" : ""}">
             <i class="fas ${on(i) ? "fa-lock-open" : "fa-lock"}" aria-hidden="true"></i>
             <span class="skill-text"><b>${esc(s.name)}</b>${s.description ? `<span>${esc(s.description)}</span>` : ""}</span>
-            <span class="skill-exp">${fmt(s.exp)} Skill EXP</span>
+            <span class="skill-exp">${fmt(s.exp)} Mastery EXP</span>
           </li>`
         )
         .join("");
-      skillPart = bar("Guild Skill EXP", x.skillExp, top, "var(--teal)", marks) + sources(x.skill) + `<ul class="skills">${list}</ul>`;
+      skillPart = bar("Mastery EXP", x.skillExp, top, "var(--teal)", marks) + sources(x.skill) + `<ul class="skills">${list}</ul>`;
     }
 
     const awards = x.awards.filter((a) => !a.player);
     return `
       <div class="stat-block guild-exp">
-        ${cap ? bar("Guild EXP", x.exp, cap, "var(--pink)") + sources(x.guild) : ""}
+        ${cap ? bar("War EXP", x.exp, cap, "var(--pink)") + sources(x.guild) : ""}
         ${skillPart}
         ${awards.length ? `<div class="achievements">${awards.map((a) => `<span class="achievement"><i class="fas fa-medal" aria-hidden="true"></i>${esc(a.name)}</span>`).join("")}</div>` : ""}
       </div>`;
