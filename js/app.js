@@ -469,12 +469,37 @@
     const kind = (w) => (/siege/i.test(w.label) ? "siege" : /raid/i.test(w.label) ? "raid" : "event");
     const iso = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
     const today = iso(new Date());
+    // Philippine holidays from CFG.holidays: { date, name, type: "regular" | "special" }.
+    const holidayOn = new Map((CFG.holidays || []).map((h) => [h.date, h]));
+    const holidayTag = (h) => `<span class="cal-holiday ${h.type === "regular" ? "regular" : ""}" title="${esc(`${h.name} (${h.type === "regular" ? "regular holiday" : "special non-working day"})`)}">${esc(h.name)}</span>`;
+    // Under each month, the holidays in full (names are cut short inside the day boxes on phones).
+    const monthHolidays = (y, m) => {
+      const list = (CFG.holidays || []).filter((h) => h.date.startsWith(`${y}-${String(m).padStart(2, "0")}`));
+      return list.length
+        ? `<ul class="cal-holidays">${list.map((h) => `<li class="${h.type === "regular" ? "regular" : ""}"><b>${esc(new Date(`${h.date}T00:00:00`).toLocaleDateString(undefined, { month: "short", day: "numeric" }))}</b> ${esc(h.name)} <span>${h.type === "regular" ? "Regular holiday" : "Special non-working day"}</span></li>`).join("")}</ul>`
+        : "";
+    };
     const byDate = new Map();
     weeks.forEach((w, i) => w.date && byDate.set(w.date, [...(byDate.get(w.date) || []), i]));
     const dayButton = (i, inner) => {
       const w = weeks[i];
       return `<button class="cal-event ${kind(w)} ${i === state.scheduleDay ? "selected" : ""} ${w.progress >= 100 ? "done" : ""}" data-schedule-day="${i}" aria-pressed="${i === state.scheduleDay}" aria-label="${esc(`${w.label}, ${w.date ? longDate(w.date) : "date to be set"}`)}">${inner}</button>`;
     };
+
+    const w = weeks[state.scheduleDay];
+    const fixtures = state.raw.matches.filter((m) => m.week === w.label);
+    const status = w.progress >= 100 ? "Complete" : w.progress > 0 ? `${w.progress}% played` : "Upcoming";
+    const detail = `
+      <section class="cal-detail ${kind(w)}" aria-live="polite">
+        <h4>${esc(w.label)}</h4>
+        ${holidayOn.has(w.date) ? `<p class="cal-holiday-note"><i class="fas fa-flag" aria-hidden="true"></i> ${esc(holidayOn.get(w.date).name)}, ${holidayOn.get(w.date).type === "regular" ? "a regular holiday" : "a special non-working day"}</p>` : ""}
+        <p class="cal-meta"><span>${w.date ? esc(longDate(w.date)) : "Date to be set"}</span><span>${plural(fixtures.length, "team match", "team matches")}</span><span>${esc(status)}</span></p>
+        ${fixtures.length
+          ? `<ul class="fixtures">${fixtures.map((m, j) => (m.round && m.round !== fixtures[j - 1]?.round ? `<li class="fixture-round">Round ${m.round}</li>` : "") + fixtureRow(m)).join("")}</ul>`
+          : `<p class="muted">${kind(w) === "siege" ? "Match-ups haven't been set yet." : "No guild match-ups on this day."}</p>`}
+      </section>`;
+    // The details go right under the month of the selected day (or under the undated row).
+    const detailMonth = w.date ? w.date.slice(0, 7) : null;
 
     const dated = weeks.filter((w) => w.date).map((w) => w.date).sort();
     const months = [];
@@ -492,9 +517,11 @@
         for (let d = 1; d <= days; d++) {
           const date = iso(new Date(y, m - 1, d));
           const events = byDate.get(date) || [];
+          const holiday = holidayOn.get(date);
+          const hTag = holiday ? holidayTag(holiday) : "";
           cells.push(`
-            <div class="cal-day ${date === today ? "today" : ""} ${events.length ? "has-event" : ""}">
-              ${events.length ? events.map((i) => dayButton(i, `<span class="cal-num">${d}</span><span class="cal-label">${esc(weeks[i].label)}</span>`)).join("") : `<span class="cal-num">${d}</span>`}
+            <div class="cal-day ${date === today ? "today" : ""} ${events.length ? "has-event" : ""} ${holiday ? "holiday" : ""}">
+              ${events.length ? events.map((i) => dayButton(i, `<span class="cal-num">${d}</span><span class="cal-label">${esc(weeks[i].label)}</span>${hTag}`)).join("") : `<span class="cal-num">${d}</span>${hTag}`}
             </div>`);
         }
         return `
@@ -504,30 +531,24 @@
               ${weekdays.map((d) => `<span class="cal-weekday" aria-hidden="true">${esc(d)}</span>`).join("")}
               ${cells.join("")}
             </div>
-          </section>`;
+            ${monthHolidays(y, m)}
+          </section>
+          ${detailMonth === `${y}-${String(m).padStart(2, "0")}` ? detail : ""}`;
       })
       .join("");
 
     const undated = weeks.map((w, i) => i).filter((i) => !weeks[i].date);
-    const w = weeks[state.scheduleDay];
-    const fixtures = state.raw.matches.filter((m) => m.week === w.label);
-    const status = w.progress >= 100 ? "Complete" : w.progress > 0 ? `${w.progress}% played` : "Upcoming";
 
     $("#schedule-list").innerHTML = `
       <ul class="cal-legend" aria-label="Key">
         <li><span class="swatch siege"></span>Guild Siege</li>
         <li><span class="swatch raid"></span>Grand Raid</li>
         <li><span class="swatch event"></span>Other match day</li>
+        <li><span class="swatch holiday"></span>PH holiday</li>
       </ul>
       <div class="cal-months">${calendars}</div>
       ${undated.length ? `<div class="cal-undated"><span class="muted">Date to be set:</span>${undated.map((i) => dayButton(i, `<span class="cal-label">${esc(weeks[i].label)}</span>`)).join("")}</div>` : ""}
-      <section class="cal-detail ${kind(w)}" aria-live="polite">
-        <h4>${esc(w.label)}</h4>
-        <p class="cal-meta"><span>${w.date ? esc(longDate(w.date)) : "Date to be set"}</span><span>${plural(fixtures.length, "team match", "team matches")}</span><span>${esc(status)}</span></p>
-        ${fixtures.length
-          ? `<ul class="fixtures">${fixtures.map((m, j) => (m.round && m.round !== fixtures[j - 1]?.round ? `<li class="fixture-round">Round ${m.round}</li>` : "") + fixtureRow(m)).join("")}</ul>`
-          : `<p class="muted">${kind(w) === "siege" ? "Match-ups haven't been set yet." : "No guild match-ups on this day."}</p>`}
-      </section>`;
+      ${detailMonth ? "" : detail}`;
   }
 
   // One match-up: both guilds, with the score once it's played (bout wins, or a default win).

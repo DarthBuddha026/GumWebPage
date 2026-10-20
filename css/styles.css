@@ -1110,13 +1110,14 @@ a { color: inherit; }
 .list-item .chev { color: var(--ash); }
 
 /* Schedule: month calendars with match days marked by kind; the selected day's match-ups show below */
-.schedule-cal { --k-siege: var(--pink); --k-raid: var(--teal); --k-event: var(--f-extreme); padding: 16px 20px 20px; }
+.schedule-cal { --k-siege: var(--pink); --k-raid: var(--teal); --k-event: var(--f-extreme); --k-holiday: var(--f-over); padding: 16px 20px 20px; }
 .cal-legend { display: flex; flex-wrap: wrap; gap: 6px 16px; list-style: none; margin: 0 0 14px; padding: 0; color: var(--ash); font-size: var(--t-xs); }
 .cal-legend li { display: flex; align-items: center; gap: 6px; }
 .cal-legend .swatch { width: 10px; height: 10px; border-radius: 2px; }
 .cal-legend .swatch.siege { background: var(--k-siege); }
 .cal-legend .swatch.raid { background: var(--k-raid); }
 .cal-legend .swatch.event { background: var(--k-event); }
+.cal-legend .swatch.holiday { background: var(--k-holiday); border-radius: 50%; }
 .cal-months { display: grid; gap: 18px; }
 .cal-month h4 { margin: 0 0 8px; font-family: var(--font-title); font-weight: 600; font-size: var(--t-m); }
 .cal-grid { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 4px; }
@@ -1133,10 +1134,23 @@ a { color: inherit; }
 .cal-event.selected { background: var(--k); color: var(--black); }
 .cal-event.done .cal-num::after { content: " ✓"; }
 .cal-event .cal-num { font-weight: 700; }
+/* PH holidays: the name under the date; regular holidays are bolder than special non-working days */
+.cal-day.holiday:not(.has-event) { border-color: color-mix(in srgb, var(--k-holiday) 55%, transparent); }
+.cal-holiday { margin-top: 2px; color: var(--k-holiday); font-size: 0.64rem; line-height: 1.15; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+.cal-holiday::before { content: "● "; font-size: 0.55rem; }
+.cal-holiday.regular { font-weight: 700; }
+.cal-event.selected .cal-holiday { color: var(--black); }
+.cal-holidays { list-style: none; margin: 8px 0 0; padding: 0; display: grid; gap: 3px; font-size: var(--t-xs); color: var(--bone); }
+.cal-holidays li::before { content: "● "; color: var(--k-holiday); font-size: 0.55rem; }
+.cal-holidays li.regular b { color: var(--k-holiday); }
+.cal-holidays span { color: var(--ash); }
+.cal-holidays span::before { content: "· "; }
+.cal-holiday-note { margin: 4px 0 0; color: var(--k-holiday); font-size: var(--t-s); }
 .cal-label { font-size: 0.68rem; line-height: 1.15; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
 .cal-undated { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-top: 14px; font-size: var(--t-xs); }
 .cal-undated .cal-event { width: auto; flex: none; }
 .cal-detail { --k: var(--k-event); margin-top: 18px; padding: 14px 16px 6px; border: 1px solid var(--line); border-left: 3px solid var(--k); border-radius: 8px; }
+.cal-months .cal-detail { margin-top: -6px; }
 .cal-detail.siege { --k: var(--k-siege); }
 .cal-detail.raid { --k: var(--k-raid); }
 .cal-detail h4 { margin: 0; font-family: var(--font-title); font-weight: 600; font-size: var(--t-l); }
