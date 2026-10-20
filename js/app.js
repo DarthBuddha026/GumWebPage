@@ -202,7 +202,7 @@
         const inWeek = matches.filter((m) => m.week === w.label);
         const done = inWeek.filter((m) => m.bouts.length || m.defaultWinner).length;
         // Weeks without fixtures (openings, raids) are complete once the admin marks them done.
-        return { id: w.id, label: w.label, date: w.date, progress: inWeek.length ? Math.round((done / inWeek.length) * 100) : w.done ? 100 : 0 };
+        return { id: w.id, label: w.label, date: w.date, location: w.location || "", progress: inWeek.length ? Math.round((done / inWeek.length) * 100) : w.done ? 100 : 0 };
       });
 
     return {
@@ -498,7 +498,7 @@
       <section class="cal-detail ${kind(w)}" aria-live="polite">
         <h4>${esc(w.label)}</h4>
         ${holidayOn.has(w.date) ? `<p class="cal-holiday-note"><i class="fas fa-flag" aria-hidden="true"></i> ${esc(holidayOn.get(w.date).name)}, ${holidayOn.get(w.date).type === "regular" ? "a regular holiday" : "a special non-working day"}</p>` : ""}
-        <p class="cal-meta"><span>${w.date ? esc(longDate(w.date)) : "Date to be set"}</span><span>${plural(fixtures.length, "team match", "team matches")}</span><span>${esc(status)}</span></p>
+        <p class="cal-meta"><span>${w.date ? esc(longDate(w.date)) : "Date to be set"}</span>${w.location ? `<span><i class="fas fa-location-dot" aria-hidden="true"></i> ${esc(w.location)}</span>` : ""}<span>${plural(fixtures.length, "team match", "team matches")}</span><span>${esc(status)}</span></p>
         ${fixtures.length
           ? `<ul class="fixtures">${fixtures.map((m, j) => (m.round && m.round !== fixtures[j - 1]?.round ? `<li class="fixture-round">Round ${m.round}</li>` : "") + fixtureRow(m)).join("")}</ul>`
           : `<p class="muted">${kind(w) === "siege" ? "Match-ups haven't been set yet." : "No guild match-ups on this day."}</p>`}
@@ -1257,6 +1257,7 @@
             <h2 class="profile-name">${esc(p.name)}</h2>
             <div class="profile-tags">
               <button class="guild-link" data-open-team="${esc(p.team)}">${esc(p.team)}</button>
+              ${p.ign ? `<span class="tag ign" title="In-game name"><i class="fas fa-gamepad" aria-hidden="true"></i>${esc(p.ign)}</span>` : ""}
               ${bracketBadge(p.bracket)}
               ${roleTag(p)}
               ${champion ? '<span class="tag top"><i class="fas fa-crown" aria-hidden="true"></i> Champion</span>' : ""}
@@ -1289,7 +1290,7 @@
           <div class="finish-rows">${finishes}</div>
         </div>
 
-        ${achievements ? `<div class="stat-block"><h5>Exclusive Badge</h5><div class="achievements">${achievements}</div></div>` : ""}
+        ${achievements ? `<div class="stat-block" data-html2canvas-ignore="true"><h5>Exclusive Badge</h5><div class="achievements">${achievements}</div></div>` : ""}
         ${playerAchievementCards(p)}
       </div>`;
     animateMeters($("#profile-view"));
