@@ -51,6 +51,46 @@ window.LEAGUE_CONFIG = {
     { id: "q4", numeral: "IV", name: "Trial of Fellowship", text: "At least 3 registered members of the same guild take part together in 2 separate Weekly Pods.", icon: "fa-handshake" },
     { id: "q5", numeral: "V", name: "Fellowship Beyond the Arena", text: "Submit a presentable video of at least 3 minutes showing the guild bonding outside regular tournament play.", icon: "fa-campground" },
   ],
+
+  // ----- Guild EXP (GGW2 handbook, section II) -----
+  // Guild EXP only goes up. It comes from Weekly Pods and Grand Raids, player achievements and shop support.
+  // Weekly Pod values; a Grand Raid pays `raidMultiplier` times these. They all stack.
+  eventExp: {
+    single: 2, // single entry
+    double: 4, // double entry (total)
+    swiss: 10, // Swiss King or Queen
+    champion: 10,
+    championBattleMaster: 5, // on top of champion
+    championLeader: 10, // on top of champion
+    bountyBattleMaster: 5, // per opposing Battle Master defeated in the Top Cut
+    bountyLeader: 10, // per opposing Guild Leader defeated in the Top Cut
+    raidMultiplier: 2,
+  },
+  // Shop support, per approved receipt: the highest tier the qualifying amount reaches.
+  shopExp: [
+    { min: 1000, exp: 4 },
+    { min: 500, exp: 2 },
+  ],
+  // Player achievements (section 2.6). Each registered blader can earn each one once; the EXP goes to their guild.
+  // Organizers tick them in the admin's Guild EXP tab, keyed by `id`, so keep ids stable when editing the text.
+  playerAchievements: [
+    { id: "pa1", name: "War Machine", exp: 10, text: "Be deployed in three consecutive successful Guild attack legs during Guild Sieges." },
+    { id: "pa2", name: "Fortress", exp: 10, text: "Be deployed in three consecutive successful Guild defense legs during Guild Sieges." },
+    { id: "pa3", name: "Full Deployment", exp: 5, text: "Be part of a Guild whose entire official roster participates in all four Grand Raids." },
+    { id: "pa4", name: "Perfect War", exp: 10, text: "Be deployed in a Guild Siege attack or defense leg won without losing an individual matchup." },
+    { id: "pa5", name: "We Feast Tonight!", exp: 5, text: "Be deployed in and complete the Guild's first official Guild Siege encounter." },
+    { id: "pa6", name: "Extreme Specialist", exp: 10, text: "Score at least two Xtreme Finishes in one individual matchup during a Grand Raid." },
+    { id: "pa7", name: "Swiss King", exp: 5, text: "Become Swiss King or Queen at an EXP-accredited Weekly Pod or Grand Raid." },
+    { id: "pa8", name: "The Strongest", exp: 5, text: "Become Champion at an EXP-accredited Weekly Pod or Grand Raid." },
+    { id: "pa9", name: "King Slayer", exp: 5, text: "Defeat an opposing Guild's registered Guild Leader for the first time during the Top Cut of a Weekly Pod or Grand Raid." },
+    { id: "pa10", name: "General Executioner", exp: 5, text: "Defeat an opposing Guild's registered Battle Master for the first time during the Top Cut of a Weekly Pod or Grand Raid." },
+  ],
+
+  // ----- Guild Skill EXP (section III, mastery results) -----
+  // Only Guild Siege legs move it, one result at a time, and it stays between 0 and skillExpMax.
+  // A successful target attack replaces Attack Win; a failed one is a normal Attack Loss.
+  siegeSkillExp: { attackWin: 20, attackLoss: -4, defendWin: 16, defendLoss: -8, successfulTarget: 40 },
+  skillExpMax: 300,
 };
 
 // Shared with the league admin, which loads this file for its schedule generator.
@@ -73,72 +113,64 @@ window.LEAGUE_CONFIG = {
     return rounds;
   }
 
-  // Each guild's season EXP from the admin's EXP document. Every event gives two amounts:
-  // Guild EXP (`rules`, achievements' `exp`): gains only, never drops, no limit (`cap` is only the required
-  // Guild EXP, where the dashboard's bar is full).
-  // Guild Skill EXP (`skillRules`, achievements' `skillExp`): takes penalties, stays between 0 and the
-  // last skill's EXP, and a skill is unlocked only while Skill EXP is at or above its threshold.
-  // weeks: [{ id }] in schedule order; winners: [{ weekId, winner, loser, attacker, target }] for decided sieges;
-  // playerTeam: Map of blader key -> guild name. Totals are clamped once per match day.
-  // ponytail: clamping is per match day, not per event; split days into events if that matters.
-  function guildExp(guildNames, weeks, winners, exp, playerTeam) {
-    const skills = (exp.skills || []).slice().sort((a, b) => a.exp - b.exp);
-    const skillTop = skills.length ? skills.at(-1).exp : Infinity;
-    const achById = new Map((exp.achievements || []).map((a) => [a.id, a]));
-    const parts = () => ({ siege: 0, raids: 0, achievements: 0 });
-    const out = new Map(guildNames.map((g) => [g, { exp: 0, skillExp: 0, unlocked: 0, guild: parts(), skill: parts(), awards: [] }]));
+  // Guild EXP for one blader's entry at a Weekly Pod or Grand Raid. `role` and each defeat's `role` are the
+  // roles recorded on the event date (leader / battle-master / member).
+  function entryExp(entry, type, cfg) {
+    const E = cfg.eventExp;
+    let n = entry.entries === 2 ? E.double : E.single;
+    if (entry.swiss) n += E.swiss;
+    if (entry.champion) n += E.champion + (entry.role === "leader" ? E.championLeader : entry.role === "battle-master" ? E.championBattleMaster : 0);
+    (entry.defeated || []).forEach((d) => (n += d.role === "leader" ? E.bountyLeader : E.bountyBattleMaster));
+    return type === "raid" ? n * E.raidMultiplier : n;
+  }
 
-    weeks.forEach((w) => {
-      const delta = new Map();
-      // rule: a key in rules/skillRules, or an achievement { exp, skillExp }.
-      const add = (guild, part, rule) => {
+  // Guild EXP for one shop receipt: the highest tier its amount reaches.
+  const purchaseExp = (amount, cfg) => cfg.shopExp.find((t) => amount >= t.min)?.exp || 0;
+
+  // Each guild's season EXP from the admin's EXP document and the siege results.
+  // Guild EXP (`exp`) only goes up: Weekly Pods and Grand Raids (`exp.events`), player achievements
+  // (`exp.playerAchievements`: achievement id -> blader keys) and shop receipts (`exp.purchases`).
+  // Guild Skill EXP (`skillExp`) comes only from sieges, applied one result at a time and kept between 0 and
+  // skillExpMax; a skill is unlocked while Skill EXP is at or above its threshold.
+  // sieges: [{ winner, loser, attacker, target }] in the order they were played; the attacker is the fixture's
+  // first guild. playerTeam: Map of blader key -> guild name (EXP goes to the blader's current guild).
+  function guildExp(guildNames, sieges, exp, playerTeam, cfg = window.LEAGUE_CONFIG) {
+    const S = cfg.siegeSkillExp;
+    const skills = (exp.skills || []).slice().sort((a, b) => a.exp - b.exp);
+    const out = new Map(guildNames.map((g) => [g, { exp: 0, skillExp: 0, unlocked: 0, guild: { events: 0, achievements: 0, shop: 0 }, siege: 0 }]));
+    const gain = (guild, part, n) => {
+      const g = out.get(guild);
+      if (!g || !n) return;
+      g.exp += n;
+      g.guild[part] += n;
+    };
+
+    sieges.forEach((m) => {
+      const attackerWon = m.winner === m.attacker;
+      const pay = attackerWon
+        ? [[m.winner, m.target ? S.successfulTarget : S.attackWin], [m.loser, S.defendLoss]]
+        : [[m.winner, S.defendWin], [m.loser, S.attackLoss]];
+      pay.forEach(([guild, n]) => {
         const g = out.get(guild);
         if (!g) return;
-        const gain = Math.max(0, (typeof rule === "string" ? exp.rules?.[rule] : rule.exp) || 0);
-        const skill = (typeof rule === "string" ? exp.skillRules?.[rule] : rule.skillExp) || 0;
-        g.guild[part] += gain;
-        g.skill[part] += skill;
-        const d = delta.get(guild) || [0, 0];
-        delta.set(guild, [d[0] + gain, d[1] + skill]);
-      };
-
-      // The attacker is the fixture's first guild. A successful target is paid instead of Attack Win.
-      winners.filter((m) => m.weekId === w.id).forEach((m) => {
-        if (m.winner === m.attacker) {
-          add(m.winner, "siege", m.target ? "successfulTarget" : "attackWin");
-          add(m.loser, "siege", "defendLoss");
-        } else {
-          add(m.winner, "siege", "defendWin");
-          add(m.loser, "siege", "attackLoss");
-        }
-      });
-
-      const raid = (exp.raids || {})[w.id];
-      if (raid) {
-        raid.attended.forEach((g) => add(g, "raids", "raidAttend"));
-        raid.battles.forEach((b) => {
-          add(playerTeam.get(b.winner === 1 ? b.p1 : b.p2), "raids", "raidBattleWin");
-        });
-      }
-
-      (exp.awards || []).filter((a) => a.weekId === w.id).forEach((a) => {
-        const ach = achById.get(a.achievementId);
-        const guild = a.guild || playerTeam.get(a.player);
-        if (!ach || !out.has(guild)) return;
-        add(guild, "achievements", ach);
-        out.get(guild).awards.push({ name: ach.name, exp: ach.exp, skillExp: ach.skillExp || 0, player: a.player || null });
-      });
-
-      delta.forEach(([gain, skill], name) => {
-        const g = out.get(name);
-        g.exp += gain;
-        g.skillExp = Math.min(skillTop, Math.max(0, g.skillExp + skill));
+        g.siege += n;
+        g.skillExp = Math.min(cfg.skillExpMax, Math.max(0, g.skillExp + n));
       });
     });
+
+    (exp.events || []).forEach((ev) => ev.entries.forEach((en) => gain(playerTeam.get(en.player), "events", entryExp(en, ev.type, cfg))));
+
+    const achById = new Map((cfg.playerAchievements || []).map((a) => [a.id, a]));
+    Object.entries(exp.playerAchievements || {}).forEach(([id, keys]) => {
+      const a = achById.get(id);
+      if (a) keys.forEach((k) => gain(playerTeam.get(k), "achievements", a.exp));
+    });
+
+    (exp.purchases || []).forEach((p) => gain(p.guild, "shop", purchaseExp(p.amount, cfg)));
 
     out.forEach((g) => (g.unlocked = skills.filter((s) => g.skillExp >= s.exp).length));
     return out;
   }
 
-  window.leagueTools = { roundRobin, guildExp };
+  window.leagueTools = { roundRobin, guildExp, entryExp, purchaseExp };
 })();

@@ -189,7 +189,7 @@
     const weekLabel = new Map(season.weeks.map((w) => [w.id, w.label]));
     const matches = season.matches.map((m) => {
       const r = results[m.id];
-      const base = { id: m.id, weekId: m.weekId, week: weekLabel.get(m.weekId), bracket: bracketOf.get(m.team1) || "A", round: m.round, team1: m.team1, team2: m.team2, bouts: [] };
+      const base = { id: m.id, weekId: m.weekId, week: weekLabel.get(m.weekId), bracket: bracketOf.get(m.team1) || "A", round: m.round, team1: m.team1, team2: m.team2, target: Boolean(m.target), bouts: [] };
       if (r?.status === "final") base.bouts = r.bouts.map(({ p1, p2, p1Pts, p2Pts, rounds }) => ({ p1, p2, p1Pts, p2Pts, rounds }));
       if (r?.status === "default") base.defaultWinner = r.defaultWinner === 1 ? m.team1 : m.team2;
       return base;
@@ -352,12 +352,18 @@
       p.ptDiff = p.overall.ptDiff;
     });
 
-    // Guild EXP, from siege winners, Grand Raids and awarded achievements (see leagueTools.guildExp in data.js).
-    const winners = raw.matches.filter((m) => m.result).map((m) => ({ weekId: m.weekId, winner: m.result.winner, loser: m.result.winner === m.team1 ? m.team2 : m.team1, attacker: m.team1, target: Boolean(m.target) }));
-    const exp = window.leagueTools.guildExp(teams.map((t) => t.name), raw.weeks || [], winners, raw.exp || {}, new Map(players.map((p) => [p.key, p.team])));
+    // Guild EXP and Guild Skill EXP (see leagueTools.guildExp in data.js). Siege results count in the order they
+    // were played: match day by date, then round, then fixture order.
+    const weekOrder = new Map((raw.weeks || []).map((w, i) => [w.id, i]));
+    const sieges = raw.matches
+      .map((m, i) => ({ m, i }))
+      .filter(({ m }) => m.result)
+      .sort((a, b) => (weekOrder.get(a.m.weekId) ?? 1e9) - (weekOrder.get(b.m.weekId) ?? 1e9) || (a.m.round || 0) - (b.m.round || 0) || a.i - b.i)
+      .map(({ m }) => ({ winner: m.result.winner, loser: m.result.winner === m.team1 ? m.team2 : m.team1, attacker: m.team1, target: m.target }));
+    const exp = window.leagueTools.guildExp(teams.map((t) => t.name), sieges, raw.exp || {}, new Map(players.map((p) => [p.key, p.team])));
     teams.forEach((t) => (t.xp = exp.get(t.name)));
-    // Awarded individual achievements also show on the blader's profile.
-    exp.forEach((g) => g.awards.forEach((a) => a.player && playersByKey.get(a.player)?.achievements.push(a.name)));
+    // Player achievements also show on the blader's profile.
+    (CFG.playerAchievements || []).forEach((a) => (raw.exp?.playerAchievements?.[a.id] || []).forEach((k) => playersByKey.get(k)?.achievements.push(a.name)));
     state.expSkills = (raw.exp?.skills || []).slice().sort((a, b) => a.exp - b.exp);
     // The required Guild EXP: the Guild EXP bar is full here, but guilds keep earning past it.
     state.expCap = raw.exp?.cap || 0;
@@ -1052,8 +1058,6 @@
     animateMeters($("#roster-view"));
   }
 
-  // Two bars on the guild profile: Guild EXP (gains only, full at the admin's required Guild EXP) and Guild Skill EXP
-  // (can drop, ends at the last skill, with a marker per skill). Each shows once the admin sets it up.
   // Guild Quest badges (CFG.guildQuests), unlocked once the admin marks the quest complete for this guild.
   function guildQuestBlock(t) {
     const quests = CFG.guildQuests || [];
@@ -1078,6 +1082,8 @@
       </div>`;
   }
 
+  // Two bars on the guild profile: Guild EXP (gains only, full at the admin's required Guild EXP) and Guild Skill EXP
+  // (sieges only, 0 to skillExpMax, with a marker per skill). Each shows once the admin sets it up.
   function guildExpBlock(t) {
     const skills = state.expSkills;
     const cap = state.expCap;
@@ -1085,14 +1091,14 @@
     if (!x || (!cap && !skills.length)) return "";
     const fmt = (n) => n.toLocaleString();
     const signedFmt = (n) => (n > 0 ? `+${fmt(n)}` : fmt(n));
-    const sources = (p) => `<p class="exp-sources">Siege ${signedFmt(p.siege)} · Raids ${signedFmt(p.raids)} · Achievements ${signedFmt(p.achievements)}</p>`;
+    const sources = (p) => `<p class="exp-sources">Pods & Raids ${signedFmt(p.events)} · Achievements ${signedFmt(p.achievements)} · Shop ${signedFmt(p.shop)}</p>`;
     const bar = (title, value, max, color, marks = "") => `
       <h5>${title} <span class="exp-total">${fmt(value)} <small>/ ${fmt(max)}</small></span></h5>
       <div class="exp-track">${meter(value / max, { color })}${marks}</div>`;
 
     let skillPart = "";
     if (skills.length) {
-      const top = skills.at(-1).exp;
+      const top = CFG.skillExpMax;
       const on = (i) => i < x.unlocked;
       const marks = skills.map((s, i) => `<span class="exp-mark ${on(i) ? "unlocked" : ""}" style="left:${(s.exp / top) * 100}%" aria-hidden="true"></span>`).join("");
       const list = skills
@@ -1105,15 +1111,13 @@
           </li>`
         )
         .join("");
-      skillPart = bar("Mastery EXP", x.skillExp, top, "var(--teal)", marks) + sources(x.skill) + `<ul class="skills">${list}</ul>`;
+      skillPart = bar("Mastery EXP", x.skillExp, top, "var(--teal)", marks) + `<p class="exp-sources">Siege results ${signedFmt(x.siege)}</p>` + `<ul class="skills">${list}</ul>`;
     }
 
-    const awards = x.awards.filter((a) => !a.player);
     return `
       <div class="stat-block guild-exp">
         ${cap ? bar("War EXP", x.exp, cap, "var(--pink)") + sources(x.guild) : ""}
         ${skillPart}
-        ${awards.length ? `<div class="achievements">${awards.map((a) => `<span class="achievement"><i class="fas fa-medal" aria-hidden="true"></i>${esc(a.name)}</span>`).join("")}</div>` : ""}
       </div>`;
   }
 
