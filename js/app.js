@@ -1107,16 +1107,16 @@
           <li class="skill ${on(i) ? "unlocked" : ""}">
             <i class="fas ${on(i) ? "fa-lock-open" : "fa-lock"}" aria-hidden="true"></i>
             <span class="skill-text"><b>${esc(s.name)}</b>${s.description ? `<span>${esc(s.description)}</span>` : ""}</span>
-            <span class="skill-exp">${fmt(s.exp)} Mastery EXP</span>
+            <span class="skill-exp">${fmt(s.exp)} Skill EXP</span>
           </li>`
         )
         .join("");
-      skillPart = bar("Mastery EXP", x.skillExp, top, "var(--teal)", marks) + `<p class="exp-sources">Siege results ${signedFmt(x.siege)}</p>` + `<ul class="skills">${list}</ul>`;
+      skillPart = bar("Skill EXP", x.skillExp, top, "var(--teal)", marks) + `<p class="exp-sources">Siege results ${signedFmt(x.siege)}</p>` + `<ul class="skills">${list}</ul>`;
     }
 
     return `
       <div class="stat-block guild-exp">
-        ${cap ? bar("War EXP", x.exp, cap, "var(--pink)") + sources(x.guild) : ""}
+        ${cap ? bar("Guild EXP", x.exp, cap, "var(--pink)") + sources(x.guild) : ""}
         ${skillPart}
       </div>`;
   }
