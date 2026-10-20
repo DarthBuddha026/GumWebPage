@@ -454,33 +454,80 @@
     });
   }
 
+  // The schedule as month calendars: match days are marked by kind (siege, raid, other), and the
+  // selected day's details and match-ups show underneath. Undated match days are listed after the months.
   function renderSchedule() {
     const weeks = state.raw.weeks || [];
+    if (!weeks.length) {
+      $("#schedule-list").innerHTML = emptyState("fa-calendar", "No schedule yet", "Match days appear here once they're set.");
+      return;
+    }
+    if (state.scheduleDay == null || !weeks[state.scheduleDay]) {
+      const current = weeks.findIndex((w) => w.label === state.currentWeek);
+      state.scheduleDay = Math.max(current, 0);
+    }
+    const kind = (w) => (/siege/i.test(w.label) ? "siege" : /raid/i.test(w.label) ? "raid" : "event");
+    const iso = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+    const today = iso(new Date());
+    const byDate = new Map();
+    weeks.forEach((w, i) => w.date && byDate.set(w.date, [...(byDate.get(w.date) || []), i]));
+    const dayButton = (i, inner) => {
+      const w = weeks[i];
+      return `<button class="cal-event ${kind(w)} ${i === state.scheduleDay ? "selected" : ""} ${w.progress >= 100 ? "done" : ""}" data-schedule-day="${i}" aria-pressed="${i === state.scheduleDay}" aria-label="${esc(`${w.label}, ${w.date ? longDate(w.date) : "date to be set"}`)}">${inner}</button>`;
+    };
 
-    $("#schedule-list").innerHTML = weeks
-      .map((w, i) => {
-        const fixtures = state.raw.matches.filter((m) => m.week === w.label);
-        const status = w.progress >= 100 ? "Complete" : w.progress > 0 ? `${w.progress}% played` : "Upcoming";
-        const row = (cls, chev) => `
-          <div class="list-item ${cls}">
-            <span class="avatar ${w.label === state.currentWeek ? "pink" : ""}" aria-hidden="true">${i + 1}</span>
-            <div class="stack">
-              <span class="primary">${esc(w.label)}</span>
-              <span class="secondary"><span>${esc(longDate(w.date))}</span><span>${plural(fixtures.length, "team match", "team matches")}</span><span>${esc(status)}</span></span>
-            </div>
-            ${chev ? '<i class="fas fa-chevron-down chev" aria-hidden="true"></i>' : ""}
-          </div>`;
-        // Match days with match-ups open to list them; the rest stay plain rows.
-        if (!fixtures.length) return `<li>${row("static", false)}</li>`;
+    const dated = weeks.filter((w) => w.date).map((w) => w.date).sort();
+    const months = [];
+    if (dated.length) {
+      const [y0, m0] = dated[0].split("-").map(Number);
+      const [y1, m1] = dated.at(-1).split("-").map(Number);
+      for (let y = y0, m = m0; y < y1 || (y === y1 && m <= m1); m === 12 ? ((m = 1), y++) : m++) months.push([y, m]);
+    }
+    const weekdays = Array.from({ length: 7 }, (_, d) => new Date(2023, 0, 1 + d).toLocaleDateString(undefined, { weekday: "narrow" }));
+    const calendars = months
+      .map(([y, m]) => {
+        const first = new Date(y, m - 1, 1);
+        const days = new Date(y, m, 0).getDate();
+        const cells = Array.from({ length: first.getDay() }, () => '<span class="cal-day blank"></span>');
+        for (let d = 1; d <= days; d++) {
+          const date = iso(new Date(y, m - 1, d));
+          const events = byDate.get(date) || [];
+          cells.push(`
+            <div class="cal-day ${date === today ? "today" : ""} ${events.length ? "has-event" : ""}">
+              ${events.length ? events.map((i) => dayButton(i, `<span class="cal-num">${d}</span><span class="cal-label">${esc(weeks[i].label)}</span>`)).join("") : `<span class="cal-num">${d}</span>`}
+            </div>`);
+        }
         return `
-          <li>
-            <details class="schedule-week">
-              <summary>${row("", true)}</summary>
-              <ul class="fixtures">${fixtures.map((m, j) => (m.round && m.round !== fixtures[j - 1]?.round ? `<li class="fixture-round">Round ${m.round}</li>` : "") + fixtureRow(m)).join("")}</ul>
-            </details>
-          </li>`;
+          <section class="cal-month">
+            <h4>${esc(first.toLocaleDateString(undefined, { month: "long", year: "numeric" }))}</h4>
+            <div class="cal-grid">
+              ${weekdays.map((d) => `<span class="cal-weekday" aria-hidden="true">${esc(d)}</span>`).join("")}
+              ${cells.join("")}
+            </div>
+          </section>`;
       })
       .join("");
+
+    const undated = weeks.map((w, i) => i).filter((i) => !weeks[i].date);
+    const w = weeks[state.scheduleDay];
+    const fixtures = state.raw.matches.filter((m) => m.week === w.label);
+    const status = w.progress >= 100 ? "Complete" : w.progress > 0 ? `${w.progress}% played` : "Upcoming";
+
+    $("#schedule-list").innerHTML = `
+      <ul class="cal-legend" aria-label="Key">
+        <li><span class="swatch siege"></span>Guild Siege</li>
+        <li><span class="swatch raid"></span>Grand Raid</li>
+        <li><span class="swatch event"></span>Other match day</li>
+      </ul>
+      <div class="cal-months">${calendars}</div>
+      ${undated.length ? `<div class="cal-undated"><span class="muted">Date to be set:</span>${undated.map((i) => dayButton(i, `<span class="cal-label">${esc(weeks[i].label)}</span>`)).join("")}</div>` : ""}
+      <section class="cal-detail ${kind(w)}" aria-live="polite">
+        <h4>${esc(w.label)}</h4>
+        <p class="cal-meta"><span>${w.date ? esc(longDate(w.date)) : "Date to be set"}</span><span>${plural(fixtures.length, "team match", "team matches")}</span><span>${esc(status)}</span></p>
+        ${fixtures.length
+          ? `<ul class="fixtures">${fixtures.map((m, j) => (m.round && m.round !== fixtures[j - 1]?.round ? `<li class="fixture-round">Round ${m.round}</li>` : "") + fixtureRow(m)).join("")}</ul>`
+          : `<p class="muted">${kind(w) === "siege" ? "Match-ups haven't been set yet." : "No guild match-ups on this day."}</p>`}
+      </section>`;
   }
 
   // One match-up: both guilds, with the score once it's played (bout wins, or a default win).
@@ -1530,6 +1577,14 @@
           case "share-profile": return shareProfile();
           case "share-guild": return shareGuild();
         }
+      }
+
+      const day = e.target.closest("[data-schedule-day]");
+      if (day) {
+        state.scheduleDay = Number(day.dataset.scheduleDay);
+        renderSchedule();
+        // The details sit under the months; bring them into view.
+        return $(".cal-detail").scrollIntoView({ behavior: "smooth", block: "nearest" });
       }
 
       const toggle = e.target.closest("[data-toggle-group]");
