@@ -1342,6 +1342,39 @@ a { color: inherit; }
 .skill.unlocked { color: var(--bone); }
 .skill.unlocked i { color: var(--teal-bright); }
 
+/* GGW2 achievements on the blader profile: tall slate cards with a gold frame, a diamond emblem and the name */
+.ach-head { display: flex; justify-content: space-between; align-items: baseline; }
+.ach-grid { --gold: #e3c98f; --gold-dim: rgba(227, 201, 143, 0.45); list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); grid-auto-rows: 1fr; gap: 8px; }
+/* Every card is the same size: rows share one height (the tallest card's), and each card fills its cell. */
+.ach-grid > li { display: flex; aspect-ratio: 0.68; }
+.ach-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  height: 100%;
+  padding: 12px 6px;
+  border: 2px solid var(--gold-dim);
+  border-radius: 10px;
+  corner-shape: scoop;
+  background: linear-gradient(180deg, #3b4258, #2a2f41);
+  box-shadow: inset 0 0 0 4px #31374b, inset 0 0 0 5px rgba(227, 201, 143, 0.28), 0 4px 14px rgba(0, 0, 0, 0.35);
+  color: var(--gold);
+  font: inherit;
+  cursor: pointer;
+}
+.ach-emblem { position: relative; display: grid; place-items: center; width: 52px; height: 52px; }
+.ach-emblem::before { content: ""; position: absolute; inset: 7px; border: 2px solid var(--gold-dim); transform: rotate(45deg); background: rgba(227, 201, 143, 0.08); }
+.ach-emblem i { position: relative; font-size: 1.5rem; text-shadow: 0 0 12px rgba(227, 201, 143, 0.45); }
+/* The name always takes two lines' height, so the EXP pills line up across a row. */
+.ach-name { display: flex; align-items: center; justify-content: center; min-height: 2.3em; font-family: var(--font-title); font-weight: 600; font-size: var(--t-xs); line-height: 1.15; text-align: center; color: #f3e6c4; }
+.ach-exp { margin-top: -2px; padding: 1px 8px; border: 1px solid var(--gold-dim); border-radius: 999px; font-size: var(--t-xs); font-weight: 600; color: var(--gold); font-variant-numeric: tabular-nums; }
+.ach-lock { position: absolute; top: 10px; right: 12px; font-size: 0.75rem; color: var(--ash); }
+.ach-card:not(.unlocked) { filter: grayscale(1); opacity: 0.5; }
+
 /* Guild Quest badges, under the roster */
 .guild-quests { margin-bottom: 8px; }
 .guild-quests h5 { display: flex; justify-content: space-between; align-items: baseline; }
@@ -1614,6 +1647,7 @@ a.bracket-launch:hover { border-color: var(--pink); background: var(--surface-ra
 
 @media (max-width: 560px) {
   .fixtures { padding-left: 16px; }
+  .ach-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   :root { --hud-h: 56px; }
   .hud-brand { font-size: var(--t-m); }
   .hud-logo { height: 38px; }

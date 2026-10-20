@@ -366,8 +366,9 @@
       .map(({ m }) => ({ winner: m.result.winner, loser: m.result.winner === m.team1 ? m.team2 : m.team1, attacker: m.team1, target: m.target }));
     const exp = window.leagueTools.guildExp(teams.map((t) => t.name), sieges, raw.exp || {}, new Map(players.map((p) => [p.key, p.team])));
     teams.forEach((t) => (t.xp = exp.get(t.name)));
-    // Player achievements also show on the blader's profile.
-    (CFG.playerAchievements || []).forEach((a) => (raw.exp?.playerAchievements?.[a.id] || []).forEach((k) => playersByKey.get(k)?.achievements.push(a.name)));
+    // GGW2 player achievements each blader has unlocked (shown as cards on their profile, apart from the exclusive badges).
+    players.forEach((p) => (p.unlocked = new Set()));
+    (CFG.playerAchievements || []).forEach((a) => (raw.exp?.playerAchievements?.[a.id] || []).forEach((k) => playersByKey.get(k)?.unlocked.add(a.id)));
     state.expSkills = (raw.exp?.skills || []).slice().sort((a, b) => a.exp - b.exp);
     // The required Guild EXP: the Guild EXP bar is full here, but guilds keep earning past it.
     state.expCap = raw.exp?.cap || 0;
@@ -1193,6 +1194,33 @@
       </div>`;
   }
 
+  // GGW2 unlockable achievements (CFG.playerAchievements) as a grid of badge cards, unlocked when the
+  // admin awards them. Each card shows the Guild EXP it gives; a tap shows the condition as a toast.
+  function playerAchievementCards(p) {
+    const list = CFG.playerAchievements || [];
+    if (!list.length) return "";
+    const cards = list
+      .map((a) => {
+        const on = p.unlocked?.has(a.id);
+        return `
+        <li>
+          <button class="ach-card ${on ? "unlocked" : ""}" data-ach-info="${esc(a.id)}" aria-label="${esc(`${a.name}, ${on ? "unlocked" : "locked"}, +${a.exp} EXP. ${a.text}`)}">
+            <span class="ach-emblem" aria-hidden="true"><i class="fas ${esc(a.icon || "fa-medal")}"></i></span>
+            <span class="ach-name">${esc(a.name)}</span>
+            <span class="ach-exp">+${a.exp} EXP</span>
+            ${on ? "" : '<i class="fas fa-lock ach-lock" aria-hidden="true"></i>'}
+          </button>
+        </li>`;
+      })
+      .join("");
+    const count = list.filter((a) => p.unlocked?.has(a.id)).length;
+    return `
+      <div class="stat-block">
+        <h5 class="ach-head">GGW2 Achievements <span class="exp-total">${count} <small>/ ${list.length}</small></span></h5>
+        <ul class="ach-grid">${cards}</ul>
+      </div>`;
+  }
+
   function renderProfile(key) {
     const p = state.playersByKey.get(key);
     const o = p.overall;
@@ -1261,7 +1289,8 @@
           <div class="finish-rows">${finishes}</div>
         </div>
 
-        ${achievements ? `<div class="stat-block"><h5>Achievements</h5><div class="achievements">${achievements}</div></div>` : ""}
+        ${achievements ? `<div class="stat-block"><h5>Exclusive Badge</h5><div class="achievements">${achievements}</div></div>` : ""}
+        ${playerAchievementCards(p)}
       </div>`;
     animateMeters($("#profile-view"));
   }
@@ -1602,6 +1631,12 @@
           case "share-profile": return shareProfile();
           case "share-guild": return shareGuild();
         }
+      }
+
+      const ach = e.target.closest("[data-ach-info]");
+      if (ach) {
+        const info = (CFG.playerAchievements || []).find((x) => x.id === ach.dataset.achInfo);
+        return toast(`${info.name}: ${info.text}`);
       }
 
       const day = e.target.closest("[data-schedule-day]");

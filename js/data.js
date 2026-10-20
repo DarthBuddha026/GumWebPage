@@ -96,17 +96,18 @@ window.LEAGUE_CONFIG = {
   ],
   // Player achievements (section 2.6). Each registered blader can earn each one once; the EXP goes to their guild.
   // Organizers tick them in the admin's Guild EXP tab, keyed by `id`, so keep ids stable when editing the text.
+  // `icon` is the Font Awesome icon on the blader profile achievement badge.
   playerAchievements: [
-    { id: "pa1", name: "War Machine", exp: 10, text: "Be deployed in three consecutive successful Guild attack legs during Guild Sieges." },
-    { id: "pa2", name: "Fortress", exp: 10, text: "Be deployed in three consecutive successful Guild defense legs during Guild Sieges." },
-    { id: "pa3", name: "Full Deployment", exp: 5, text: "Be part of a Guild whose entire official roster participates in all four Grand Raids." },
-    { id: "pa4", name: "Perfect War", exp: 10, text: "Be deployed in a Guild Siege attack or defense leg won without losing an individual matchup." },
-    { id: "pa5", name: "We Feast Tonight!", exp: 5, text: "Be deployed in and complete the Guild's first official Guild Siege encounter." },
-    { id: "pa6", name: "Extreme Specialist", exp: 10, text: "Score at least two Xtreme Finishes in one individual matchup during a Grand Raid." },
-    { id: "pa7", name: "Swiss King", exp: 5, text: "Become Swiss King or Queen at an EXP-accredited Weekly Pod or Grand Raid." },
-    { id: "pa8", name: "The Strongest", exp: 5, text: "Become Champion at an EXP-accredited Weekly Pod or Grand Raid." },
-    { id: "pa9", name: "King Slayer", exp: 5, text: "Defeat an opposing Guild's registered Guild Leader for the first time during the Top Cut of a Weekly Pod or Grand Raid." },
-    { id: "pa10", name: "General Executioner", exp: 5, text: "Defeat an opposing Guild's registered Battle Master for the first time during the Top Cut of a Weekly Pod or Grand Raid." },
+    { id: "pa1", name: "War Machine", exp: 10, icon: "fa-hammer", text: "Be deployed in three consecutive successful Guild attack legs during Guild Sieges." },
+    { id: "pa2", name: "Fortress", exp: 10, icon: "fa-chess-rook", text: "Be deployed in three consecutive successful Guild defense legs during Guild Sieges." },
+    { id: "pa3", name: "Full Deployment", exp: 5, icon: "fa-people-group", text: "Be part of a Guild whose entire official roster participates in all four Grand Raids." },
+    { id: "pa4", name: "Perfect War", exp: 10, icon: "fa-crown", text: "Be deployed in a Guild Siege attack or defense leg won without losing an individual matchup." },
+    { id: "pa5", name: "We Feast Tonight!", exp: 5, icon: "fa-drumstick-bite", text: "Be deployed in and complete the Guild's first official Guild Siege encounter." },
+    { id: "pa6", name: "Extreme Specialist", exp: 10, icon: "fa-bolt", text: "Score at least two Xtreme Finishes in one individual matchup during a Grand Raid." },
+    { id: "pa7", name: "Swiss King", exp: 5, icon: "fa-chess-king", text: "Become Swiss King or Queen at an EXP-accredited Weekly Pod or Grand Raid." },
+    { id: "pa8", name: "The Strongest", exp: 5, icon: "fa-trophy", text: "Become Champion at an EXP-accredited Weekly Pod or Grand Raid." },
+    { id: "pa9", name: "King Slayer", exp: 5, icon: "fa-skull", text: "Defeat an opposing Guild's registered Guild Leader for the first time during the Top Cut of a Weekly Pod or Grand Raid." },
+    { id: "pa10", name: "General Executioner", exp: 5, icon: "fa-skull-crossbones", text: "Defeat an opposing Guild's registered Battle Master for the first time during the Top Cut of a Weekly Pod or Grand Raid." },
   ],
 
   // ----- Guild Skill EXP (section III, mastery results) -----
