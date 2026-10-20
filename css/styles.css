@@ -655,6 +655,7 @@ a { color: inherit; }
 .tag.top { background: rgba(255, 46, 136, 0.16); color: var(--pink); }
 .tag.unranked { background: none; border: 1px dashed var(--line); }
 .tag.role { background: rgba(14, 163, 174, 0.16); color: var(--teal); }
+.tag.ign { background: rgba(233, 241, 240, 0.08); color: var(--bone); }
 
 /* ---------- Season titles ---------- */
 
@@ -1361,11 +1362,12 @@ a { color: inherit; }
   border-radius: 10px;
   corner-shape: scoop;
   background: linear-gradient(180deg, #3b4258, #2a2f41);
-  box-shadow: inset 0 0 0 4px #31374b, inset 0 0 0 5px rgba(227, 201, 143, 0.28), 0 4px 14px rgba(0, 0, 0, 0.35);
   color: var(--gold);
   font: inherit;
   cursor: pointer;
 }
+/* Inner gold frame. Drawn with a border (not an inset shadow) so the shared profile image shows it too. */
+.ach-card::after { content: ""; position: absolute; inset: 4px; border: 1px solid rgba(227, 201, 143, 0.28); border-radius: 7px; pointer-events: none; }
 .ach-emblem { position: relative; display: grid; place-items: center; width: 52px; height: 52px; }
 .ach-emblem::before { content: ""; position: absolute; inset: 7px; border: 2px solid var(--gold-dim); transform: rotate(45deg); background: rgba(227, 201, 143, 0.08); }
 .ach-emblem i { position: relative; font-size: 1.5rem; text-shadow: 0 0 12px rgba(227, 201, 143, 0.45); }
@@ -1373,7 +1375,13 @@ a { color: inherit; }
 .ach-name { display: flex; align-items: center; justify-content: center; min-height: 2.3em; font-family: var(--font-title); font-weight: 600; font-size: var(--t-xs); line-height: 1.15; text-align: center; color: #f3e6c4; }
 .ach-exp { margin-top: -2px; padding: 1px 8px; border: 1px solid var(--gold-dim); border-radius: 999px; font-size: var(--t-xs); font-weight: 600; color: var(--gold); font-variant-numeric: tabular-nums; }
 .ach-lock { position: absolute; top: 10px; right: 12px; font-size: 0.75rem; color: var(--ash); }
-.ach-card:not(.unlocked) { filter: grayscale(1); opacity: 0.5; }
+/* Locked cards are greyed with plain colours (the share image can't apply CSS filters). */
+.ach-card:not(.unlocked) { border-color: rgba(233, 241, 240, 0.14); background: linear-gradient(180deg, #26282e, #1c1d22); color: #5d6168; }
+.ach-card:not(.unlocked)::after { border-color: rgba(233, 241, 240, 0.08); }
+.ach-card:not(.unlocked) .ach-emblem::before { border-color: rgba(233, 241, 240, 0.16); background: none; }
+.ach-card:not(.unlocked) .ach-emblem i { text-shadow: none; }
+.ach-card:not(.unlocked) .ach-name { color: #6f737a; }
+.ach-card:not(.unlocked) .ach-exp { border-color: rgba(233, 241, 240, 0.14); color: #6f737a; }
 
 /* Guild Quest badges, under the roster */
 .guild-quests { margin-bottom: 8px; }
