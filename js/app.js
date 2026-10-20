@@ -257,6 +257,10 @@
     return b.wins - a.wins || b.winRate - a.winRate || b.setDiff - a.setDiff || b.ptDiff - a.ptDiff || a.name.localeCompare(b.name);
   }
 
+  // The season's own match days (Grand Opening, Grand Raids, Guild Sieges). Other days on the admin's
+  // schedule, such as GUM Weekly Pods, stay off the season path and out of "this week".
+  const isSeasonDay = (w) => /opening|raid|siege/i.test(w.label);
+
   function computeCurrentWeek(weeks) {
     const live = weeks.find((w) => w.progress > 0 && w.progress < 100);
     if (live) return live.label;
@@ -266,7 +270,7 @@
 
   function buildModel(raw) {
     state.raw = raw;
-    state.currentWeek = computeCurrentWeek(raw.weeks || []);
+    state.currentWeek = computeCurrentWeek((raw.weeks || []).filter(isSeasonDay));
 
     const teams = raw.teams.map((t) => ({ ...t, wins: 0, losses: 0, played: 0, points: 0, conceded: 0, setWins: 0, setLosses: 0 }));
     const teamsByName = new Map(teams.map((t) => [t.name, t]));
@@ -597,7 +601,7 @@
   }
 
   function renderHero() {
-    const weeks = state.raw.weeks || [];
+    const weeks = (state.raw.weeks || []).filter(isSeasonDay);
     const played = state.raw.matches.filter((m) => m.bouts?.length || m.defaultWinner).length;
     const total = state.raw.matches.length;
     const withGames = state.players.filter((p) => p.overall.games);
