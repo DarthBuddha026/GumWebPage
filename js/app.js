@@ -498,10 +498,10 @@
       <section class="cal-detail ${kind(w)}" aria-live="polite">
         <h4>${esc(w.label)}</h4>
         ${holidayOn.has(w.date) ? `<p class="cal-holiday-note"><i class="fas fa-flag" aria-hidden="true"></i> ${esc(holidayOn.get(w.date).name)}, ${holidayOn.get(w.date).type === "regular" ? "a regular holiday" : "a special non-working day"}</p>` : ""}
-        <p class="cal-meta"><span>${w.date ? esc(longDate(w.date)) : "Date to be set"}</span>${w.location ? `<span><i class="fas fa-location-dot" aria-hidden="true"></i> ${esc(w.location)}</span>` : ""}<span>${plural(fixtures.length, "team match", "team matches")}</span><span>${esc(status)}</span></p>
+        <p class="cal-meta"><span>${w.date ? esc(longDate(w.date)) : "Date to be set"}</span>${w.location ? `<span><i class="fas fa-location-dot" aria-hidden="true"></i> ${esc(w.location)}</span>` : ""}${kind(w) === "siege" || fixtures.length ? `<span>${plural(fixtures.length, "team match", "team matches")}</span>` : ""}<span>${esc(status)}</span></p>
         ${fixtures.length
           ? `<ul class="fixtures">${fixtures.map((m, j) => (m.round && m.round !== fixtures[j - 1]?.round ? `<li class="fixture-round">Round ${m.round}</li>` : "") + fixtureRow(m)).join("")}</ul>`
-          : `<p class="muted">${kind(w) === "siege" ? "Match-ups haven't been set yet." : "No guild match-ups on this day."}</p>`}
+          : kind(w) === "siege" ? `<p class="muted">Match-ups haven't been set yet.</p>` : ""}
       </section>`;
     // The details go right under the month of the selected day (or under the undated row).
     const detailMonth = w.date ? w.date.slice(0, 7) : null;
