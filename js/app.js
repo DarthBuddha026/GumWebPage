@@ -271,6 +271,9 @@
   function buildModel(raw) {
     state.raw = raw;
     state.currentWeek = computeCurrentWeek((raw.weeks || []).filter(isSeasonDay));
+    // Only Guild Sieges record battles, so the "current" finish table follows the current siege:
+    // the one in progress, else the latest played, else the first.
+    state.currentSiege = computeCurrentWeek((raw.weeks || []).filter((w) => /siege/i.test(w.label)));
 
     const teams = raw.teams.map((t) => ({ ...t, wins: 0, losses: 0, played: 0, points: 0, conceded: 0, setWins: 0, setLosses: 0 }));
     const teamsByName = new Map(teams.map((t) => [t.name, t]));
@@ -317,7 +320,7 @@
         [[playersByKey.get(bout.p1), bout.p1Pts, bout.p2Pts, 1], [playersByKey.get(bout.p2), bout.p2Pts, bout.p1Pts, 2]].forEach(([p, mine, theirs, side]) => {
           if (!p) return;
           addBout(p.overall, mine, theirs, rounds, side);
-          if (m.week === state.currentWeek) addBout(p.weekly, mine, theirs, rounds, side);
+          if (m.week === state.currentSiege) addBout(p.weekly, mine, theirs, rounds, side);
           p.appearances.add(m.id);
         });
       });
@@ -835,8 +838,8 @@
     const field = `${f}PG`;
     setActiveTab($("#finish-pills"), f);
     $$("[data-finish-label]").forEach((el) => (el.textContent = `${info.label} per game`));
-    $("#overall-finish-title").textContent = "Whole season";
-    $("#weekly-finish-title").textContent = state.currentWeek;
+    $("#overall-finish-title").textContent = "Whole Season";
+    $("#weekly-finish-title").textContent = state.currentSiege;
 
     const overall = state.league
       .slice()
@@ -848,7 +851,7 @@
       .slice(0, 10);
 
     $("#overall-finish-body").innerHTML = playerRows(overall, (p) => fmt2(p.overall[field]), "No qualified bladers yet.");
-    $("#weekly-finish-body").innerHTML = playerRows(weekly, (p) => fmt2(p.weekly[field]), `No battles recorded in ${state.currentWeek} yet.`);
+    $("#weekly-finish-body").innerHTML = playerRows(weekly, (p) => fmt2(p.weekly[field]), `No battles recorded in ${state.currentSiege} yet.`);
   }
 
   function wrMeter(wr) {
