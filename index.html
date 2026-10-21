@@ -40,7 +40,7 @@
     <nav class="hud-nav" id="navbar-menu" aria-label="Main">
       <button class="nav-link" data-action="open-search"><i class="fas fa-magnifying-glass" aria-hidden="true"></i> Search</button>
       <button class="nav-link" data-action="open-history"><i class="fas fa-scroll" aria-hidden="true"></i> Battle log</button>
-      <button class="nav-link" data-action="open-schedule"><i class="fa-regular fa-calendar" aria-hidden="true"></i> Schedule</button>
+      <a class="nav-link" href="#schedule" data-page-link="schedule"><i class="fa-regular fa-calendar" aria-hidden="true"></i> Schedule</a>
       <button class="nav-link hidden" data-action="open-brackets"><i class="fas fa-sitemap" aria-hidden="true"></i> Brackets</button>
       <a class="nav-link" id="nav-social" href="#" target="_blank" rel="noopener"><i class="fab fa-facebook" aria-hidden="true"></i> Facebook</a>
     </nav>
@@ -136,6 +136,17 @@
 
   </main>
 
+  <!-- Schedule page, shown instead of the dashboard at #schedule -->
+  <main id="schedule-page" class="dashboard schedule-page hidden" aria-labelledby="schedule-title">
+    <section class="section">
+      <div class="section-head">
+        <a href="#" class="back-link"><i class="fas fa-arrow-left" aria-hidden="true"></i> Back to dashboard</a>
+        <h1 id="schedule-title" class="section-title">Schedule</h1>
+      </div>
+      <div id="schedule-list" class="schedule-cal"><span class="skel skel-line" style="width:40%"></span><div class="skel skel-block" style="height:320px;margin-top:16px"></div></div>
+    </section>
+  </main>
+
   <footer class="site-footer" id="footer"></footer>
 
   <!-- Search: guilds / bladers / roster / profile -->
@@ -203,19 +214,6 @@
       <div class="modal-body scroll-view padded">
         <p class="modal-lead">Live bracket pages open in a new tab, where you can see match-ups and vote on predictions.</p>
         <div class="bracket-grid" id="bracket-launchers"></div>
-      </div>
-    </div>
-  </div>
-
-  <!-- Schedule -->
-  <div id="schedule-modal" class="modal-overlay" data-modal role="dialog" aria-modal="true" aria-labelledby="schedule-title">
-    <div class="modal-card wide auto">
-      <div class="modal-header">
-        <h3 class="modal-title" id="schedule-title">Schedule</h3>
-        <button class="icon-btn" data-close aria-label="Close"><i class="fas fa-xmark" aria-hidden="true"></i></button>
-      </div>
-      <div class="modal-body scroll-view">
-        <div id="schedule-list" class="schedule-cal"></div>
       </div>
     </div>
   </div>

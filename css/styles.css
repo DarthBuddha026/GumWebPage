@@ -1111,7 +1111,14 @@ a { color: inherit; }
 .list-item .chev { color: var(--ash); }
 
 /* Schedule: month calendars with match days marked by kind; the selected day's match-ups show below */
-.schedule-cal { --k-siege: var(--pink); --k-raid: var(--teal); --k-event: var(--f-extreme); --k-holiday: var(--f-over); padding: 16px 20px 20px; }
+.schedule-cal { --k-siege: var(--pink); --k-raid: var(--teal); --k-event: var(--f-extreme); --k-holiday: var(--f-over); }
+/* The schedule page (#schedule) */
+.schedule-page { max-width: 960px; }
+.schedule-page .section { padding-top: 40px; }
+.schedule-page .cal-day { min-height: 76px; }
+.back-link { display: inline-flex; align-items: center; gap: 8px; margin-bottom: 14px; color: var(--ash); font-size: var(--t-s); text-decoration: none; }
+.back-link:hover { color: var(--teal-bright); }
+.nav-link.active { color: var(--teal-bright); background: var(--surface-raised); }
 .cal-legend { display: flex; flex-wrap: wrap; gap: 6px 16px; list-style: none; margin: 0 0 14px; padding: 0; color: var(--ash); font-size: var(--t-xs); }
 .cal-legend li { display: flex; align-items: center; gap: 6px; }
 .cal-legend .swatch { width: 10px; height: 10px; border-radius: 2px; }
@@ -1661,6 +1668,7 @@ a.bracket-launch:hover { border-color: var(--pink); background: var(--surface-ra
 @media (max-width: 560px) {
   .fixtures { padding-left: 16px; }
   .ach-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .schedule-page .cal-day { min-height: 56px; }
   :root { --hud-h: 56px; }
   .hud-brand { font-size: var(--t-m); }
   .hud-logo { height: 38px; }

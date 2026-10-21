@@ -963,6 +963,21 @@
     }
   }
 
+  // Pages: the dashboard, or the schedule at #schedule. Only switching pages scrolls to the top,
+  // so in-page "#" links (like the map popups') don't jump.
+  function route() {
+    const page = location.hash === "#schedule" ? "schedule" : "dashboard";
+    $$("[data-page-link]").forEach((a) => a.classList.toggle("active", a.dataset.pageLink === page));
+    if (page === state.page) return;
+    state.page = page;
+    closeMobileMenu();
+    $("#dashboard").classList.toggle("hidden", page !== "dashboard");
+    $("#schedule-page").classList.toggle("hidden", page !== "schedule");
+    window.scrollTo({ top: 0, behavior: "instant" });
+    // The map can't measure itself while hidden, so redraw it once the dashboard is back.
+    if (page === "dashboard" && state.map) renderMap();
+  }
+
   function closeMobileMenu() {
     $("#menu-toggle").classList.remove("is-active");
     $("#menu-toggle").setAttribute("aria-expanded", "false");
@@ -1633,7 +1648,6 @@
         switch (action.dataset.action) {
           case "open-search": return openSearch();
           case "open-history": return openHistory();
-          case "open-schedule": return openModal("schedule-modal");
           case "open-brackets": return openModal("brackets-modal");
           case "share-profile": return shareProfile();
           case "share-guild": return shareGuild();
@@ -1701,6 +1715,8 @@
   async function init() {
     bindEvents();
     bindTooltip();
+    route();
+    window.addEventListener("hashchange", route);
     try {
       const raw = await loadData();
       // After loading, so the season number and venue from the admin are used.
