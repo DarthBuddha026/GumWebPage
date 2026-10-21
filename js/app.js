@@ -557,11 +557,17 @@
   }
 
   // One match-up: both guilds, with the score once it's played (bout wins, or a default win).
+  // The fixture's first guild attacks, the second defends (a target fixture is a target attack).
+  const sideTag = (m, attacking) =>
+    attacking
+      ? `<small class="fixture-role attack"><i class="fas ${m.target ? "fa-crosshairs" : "fa-burst"}" aria-hidden="true"></i> ${m.target ? "Target attack" : "Attack"}</small>`
+      : `<small class="fixture-role defend"><i class="fas fa-shield-halved" aria-hidden="true"></i> Defend</small>`;
+
   function fixtureRow(m) {
     const side = (name) => {
       const t = state.teamsByName.get(name) || { name };
       const won = m.result?.winner === name;
-      return `<span class="fixture-team ${won ? "won" : ""}">${teamAvatar(t)}<span>${esc(name)}</span></span>`;
+      return `<span class="fixture-team ${won ? "won" : ""}">${teamAvatar(t)}<span class="fixture-name"><span>${esc(name)}</span>${sideTag(m, name === m.team1)}</span></span>`;
     };
     const r = m.result;
     const mid = !r ? '<span class="fixture-vs">vs</span>' : r.byDefault ? '<span class="fixture-vs">Default</span>' : `<b class="fixture-score">${r.bouts1}–${r.bouts2}</b>`;
@@ -1467,7 +1473,7 @@
             <button class="encounter-head" data-toggle-group="enc-${i}" aria-expanded="false" aria-controls="enc-${i}-bouts">
               <span>
                 <span class="encounter-title">${esc(t.name)}<span class="vs">vs</span>${esc(opp)}</span>
-                <span class="encounter-sub"><span>${esc(m.week)}</span><span>${plural(m.bouts.length, "battle")}</span><span>${myPts}–${oppPts} points</span></span>
+                <span class="encounter-sub">${sideTag(m, mine === 1)}<span>${esc(m.week)}</span><span>${plural(m.bouts.length, "battle")}</span><span>${myPts}–${oppPts} points</span></span>
               </span>
               <span class="encounter-result">
                 <span class="outcome ${won ? "win" : "loss"}">${won ? "Win" : "Loss"}</span>

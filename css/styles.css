@@ -1166,6 +1166,11 @@ a { color: inherit; }
 .fixture-team span:last-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .fixture-team .avatar { width: 28px; height: 28px; }
 .fixture-team.won { color: var(--bone); font-weight: 600; }
+.fixture-name { display: grid; min-width: 0; }
+.fixture-team:last-child .fixture-name { justify-items: end; }
+.fixture-role { font-size: var(--t-xs); font-weight: 600; letter-spacing: 0.02em; white-space: nowrap; }
+.fixture-role.attack { color: var(--pink); }
+.fixture-role.defend { color: var(--teal); }
 .fixture-vs { color: var(--ash); font-size: var(--t-xs); text-transform: uppercase; }
 .fixture-score { font-variant-numeric: tabular-nums; }
 .fixture-round { padding: 14px 0 4px; color: var(--teal-bright); font-size: var(--t-xs); font-weight: 700; border-bottom: 1px solid var(--line); }
