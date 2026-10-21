@@ -8,6 +8,8 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <title>GUM Guild Wars</title>
+  <!-- Apply the saved theme before anything paints (dark unless the visitor picked light). -->
+  <script>try { document.documentElement.dataset.theme = localStorage.getItem("theme") === "light" ? "light" : "dark"; } catch (e) { document.documentElement.dataset.theme = "dark"; }</script>
   <link rel="manifest" href="manifest.json">
   <link rel="icon" type="image/png" href="images/icon-192.png">
   <link rel="apple-touch-icon" href="images/apple-touch-icon.png">
@@ -32,6 +34,9 @@
       <img class="hud-logo" src="images/gum-logo.webp" width="600" height="520" alt="GUM">
       <span data-bind="brandName">GUM Guild Wars</span>
     </a>
+
+    <!-- Theme toggle (icon only): at the far right on desktop, beside the menu button on phones. -->
+    <button class="icon-btn theme-toggle-icon" data-action="toggle-theme" data-icon-only aria-pressed="false" aria-label="Switch to light mode"><i class="fas fa-sun" aria-hidden="true"></i></button>
 
     <button class="menu-toggle" id="menu-toggle" aria-label="Open menu" aria-expanded="false" aria-controls="navbar-menu">
       <span class="bar"></span><span class="bar"></span><span class="bar"></span>

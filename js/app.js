@@ -571,15 +571,15 @@
           <ul class="cal-legend" aria-label="Key">
             <li><span class="swatch siege"></span>Guild Siege</li>
             <li><span class="swatch raid"></span>Grand Raid</li>
-            <li><span class="swatch event"></span>Other match day</li>
-            <li><span class="swatch holiday"></span>PH holiday</li>
+            <li><span class="swatch event"></span>EXP Farming</li>
+            <li><span class="swatch holiday"></span>Holiday</li>
           </ul>
           ${shown ? monthGrid(shown) : ""}
           ${undated.length ? `<div class="cal-undated"><span class="muted">Date to be set:</span>${undated.map((i) => dayButton(i, `<span class="cal-label">${esc(weeks[i].label)}</span>`)).join("")}</div>` : ""}
           ${showDetail ? detailFor(w) : placeholder}
         </section>
-        <section class="sched-panel sched-pod" aria-label="Next Weekly Pod">
-          ${pod ? upcoming(pod, "Upcoming Weekly Pod") : none("Upcoming Weekly Pod", "No Weekly Pod coming up.")}
+        <section class="sched-panel sched-pod" aria-label="Next EXP Farm Event">
+          ${pod ? upcoming(pod, "Upcoming EXP Farm Event") : none("Upcoming EXP Farm Event", "No EXP Farm Event coming up.")}
         </section>
         <section class="sched-panel sched-siege" aria-label="Next Guild Siege">
           ${siege ? upcoming(siege, siege === nextSiege ? "Upcoming Guild Siege" : "Guild Siege") + siegeMatchups : none("Upcoming Guild Siege", "No Guild Siege coming up.")}
@@ -994,6 +994,66 @@
     }
   }
 
+  // ---------------------------------------------------------------------------
+  // Theme: dark (default) or light, saved on the device. index.html applies it before paint.
+  // ---------------------------------------------------------------------------
+
+  const WIPE_MS = 700;
+  const WIPE_EASE = "cubic-bezier(0.65, 0, 0.35, 1)";
+
+  function setTheme(theme) {
+    document.documentElement.dataset.theme = theme;
+    try {
+      localStorage.setItem("theme", theme);
+    } catch {
+      // Private browsing can block storage; the theme still applies for this visit.
+    }
+    syncThemeToggle();
+  }
+
+  function syncThemeToggle() {
+    const light = document.documentElement.dataset.theme === "light";
+    $$("[data-action=toggle-theme]").forEach((b) => {
+      b.setAttribute("aria-pressed", String(light));
+      b.setAttribute("aria-label", light ? "Switch to dark mode" : "Switch to light mode");
+      const icon = `<i class="fas ${light ? "fa-moon" : "fa-sun"}" aria-hidden="true"></i>`;
+      b.innerHTML = "iconOnly" in b.dataset ? icon : `${icon} <span>${light ? "Dark mode" : "Light mode"}</span>`;
+    });
+    $('meta[name="theme-color"]')?.setAttribute("content", light ? "#f5f7f7" : "#000000");
+  }
+
+  // The new theme is revealed by a vertical wipe: left to right into light, right to left into dark,
+  // with a glowing line riding the edge. Uses the View Transitions API; without it (or with reduced
+  // motion) the theme just switches.
+  function toggleTheme() {
+    const next = document.documentElement.dataset.theme === "light" ? "dark" : "light";
+    const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
+    if (!document.startViewTransition || reduce) return setTheme(next);
+
+    const toLight = next === "light";
+    // The line joins the transition as its own layer (view-transition-name in the CSS), so it is drawn
+    // above the page snapshots; its layer is slid across in step with the wipe.
+    const line = document.createElement("div");
+    line.className = "theme-wipe-line";
+    document.body.append(line);
+    const transition = document.startViewTransition(() => setTheme(next));
+    transition.ready.then(() => {
+      const timing = { duration: WIPE_MS, easing: WIPE_EASE };
+      document.documentElement.animate(
+        { clipPath: toLight ? ["inset(0 100% 0 0)", "inset(0 0 0 0)"] : ["inset(0 0 0 100%)", "inset(0 0 0 0)"] },
+        { ...timing, pseudoElement: "::view-transition-new(root)" }
+      );
+      // Animating left (not transform) keeps the line on the same frames as the clip-path wipe;
+      // a transform would run on the compositor and drift ahead of the edge.
+      const edge = `${innerWidth - 2}px`;
+      document.documentElement.animate(
+        { left: toLight ? ["0px", edge] : [edge, "0px"] },
+        { ...timing, pseudoElement: "::view-transition-group(theme-wipe-line)" }
+      );
+    });
+    transition.finished.finally(() => line.remove());
+  }
+
   // Pages: the dashboard, or the schedule at #schedule. Only switching pages scrolls to the top,
   // so in-page "#" links (like the map popups') don't jump.
   function route() {
@@ -1389,7 +1449,16 @@
       return;
     }
     try {
-      const canvas = await html2canvas(target, { backgroundColor: "#000000", scale: 2, useCORS: true, onclone });
+      // Share images always use the dark theme, whatever the visitor is viewing in.
+      const canvas = await html2canvas(target, {
+        backgroundColor: "#000000",
+        scale: 2,
+        useCORS: true,
+        onclone: (doc) => {
+          doc.documentElement.dataset.theme = "dark";
+          if (onclone) onclone(doc);
+        },
+      });
       state.shareBlob = await new Promise((resolve) => canvas.toBlob(resolve, "image/png"));
       state.shareFileName = fileName;
       $("#share-image").src = canvas.toDataURL("image/png");
@@ -1684,6 +1753,7 @@
           case "open-brackets": return openModal("brackets-modal");
           case "share-profile": return shareProfile();
           case "share-guild": return shareGuild();
+          case "toggle-theme": return toggleTheme();
         }
       }
 
@@ -1754,6 +1824,7 @@
   async function init() {
     bindEvents();
     bindTooltip();
+    syncThemeToggle();
     route();
     window.addEventListener("hashchange", route);
     try {

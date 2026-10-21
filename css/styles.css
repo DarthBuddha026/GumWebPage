@@ -9,6 +9,7 @@
   --teal: #0ea3ae;
   --teal-bright: #3fe0ea;
   --bone: #e9f1f0;
+  --bone-rgb: 233, 241, 240; /* --bone as an RGB triple for faint fills (html2canvas can't read color-mix) */
   --ash: #8b9a9e;
 
   /* Finish palette (validated for colour-vision deficiency on black) */
@@ -40,6 +41,51 @@
   --bevel-sm: 8px;
   --gutter: clamp(16px, 4vw, 40px);
   --ease: 0.2s ease;
+}
+
+/* ---------- Light theme ----------
+   html[data-theme="light"] (set in index.html before paint, toggled in app.js). Only the palette changes;
+   a few spots that assumed a black page get light versions below. The admin never sets data-theme. */
+:root[data-theme="light"] {
+  color-scheme: light;
+  --black: #f5f7f7;
+  --bone: #0d1719;
+  --bone-rgb: 13, 23, 25;
+  --ash: #55666b;
+  --teal-bright: #0a8f99;
+  --surface: rgba(14, 163, 174, 0.07);
+  --surface-raised: rgba(14, 163, 174, 0.13);
+  --line: rgba(13, 23, 25, 0.12);
+  --line-strong: rgba(14, 163, 174, 0.55);
+}
+[data-theme="light"] .hud { background: rgba(245, 247, 247, 0.92); }
+[data-theme="light"] .skel { background-image: linear-gradient(90deg, rgba(0, 0, 0, 0.04) 30%, rgba(0, 0, 0, 0.09) 50%, rgba(0, 0, 0, 0.04) 70%); }
+[data-theme="light"] .data-table th { background: #eaf0f0; }
+[data-theme="light"] .map { background: #e6eef0; }
+[data-theme="light"] .map .leaflet-tile-pane { filter: none; }
+[data-theme="light"] .map .leaflet-control-attribution { background: rgba(255, 255, 255, 0.8); }
+[data-theme="light"] .modal-overlay { background: rgba(13, 23, 25, 0.45); }
+[data-theme="light"] .share-overlay { background: rgba(245, 247, 247, 0.97); }
+/* Neon glows are softer on a light page. */
+[data-theme="light"] .sched-panel { box-shadow: 0 0 10px color-mix(in srgb, var(--glow) 40%, transparent), inset 0 0 10px color-mix(in srgb, var(--glow) 12%, transparent); }
+
+/* ---------- Theme wipe ----------
+   The toggle swaps themes inside a View Transition: the new theme's snapshot is revealed by a clip-path
+   wipe (app.js toggleTheme), and a glowing line on its own transition layer rides the edge. */
+::view-transition-old(root),
+::view-transition-new(root) { animation: none; mix-blend-mode: normal; }
+::view-transition-group(theme-wipe-line) { animation: none; z-index: 2; }
+.theme-wipe-line {
+  view-transition-name: theme-wipe-line;
+  position: fixed;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  z-index: 9999;
+  width: 2px;
+  background: linear-gradient(180deg, var(--pink), var(--teal-bright));
+  box-shadow: 0 0 12px var(--pink), 0 0 28px var(--teal-bright);
+  pointer-events: none;
 }
 
 * { box-sizing: border-box; }
@@ -258,7 +304,7 @@ a { color: inherit; }
 
 .hud-logo { width: auto; height: 44px; }
 
-.hud-nav { display: flex; align-items: center; gap: 2px; }
+.hud-nav { display: flex; align-items: center; gap: 2px; margin-left: auto; }
 
 .nav-link {
   display: inline-flex;
@@ -281,6 +327,9 @@ a { color: inherit; }
 .nav-link i { color: var(--teal); width: 1em; text-align: center; }
 .nav-link:hover { background: var(--surface-raised); }
 .nav-link:hover i { color: var(--pink); }
+
+.theme-toggle-icon { order: 1; margin-left: 10px; color: var(--teal); }
+.theme-toggle-icon:hover { color: var(--pink); }
 
 .menu-toggle {
   display: none;
@@ -562,7 +611,7 @@ a { color: inherit; }
 .meter {
   position: relative;
   height: 8px;
-  background: rgba(233, 241, 240, 0.08);
+  background: rgba(var(--bone-rgb), 0.08);
   border-radius: 2px;
   overflow: hidden;
 }
@@ -646,7 +695,7 @@ a { color: inherit; }
   gap: 4px;
   padding: 1px 8px;
   border-radius: 4px;
-  background: rgba(233, 241, 240, 0.07);
+  background: rgba(var(--bone-rgb), 0.07);
   color: var(--ash);
   font-size: var(--t-xs);
   font-weight: 500;
@@ -655,7 +704,7 @@ a { color: inherit; }
 .tag.top { background: rgba(255, 46, 136, 0.16); color: var(--pink); }
 .tag.unranked { background: none; border: 1px dashed var(--line); }
 .tag.role { background: rgba(14, 163, 174, 0.16); color: var(--teal); }
-.tag.ign { background: rgba(233, 241, 240, 0.08); color: var(--bone); }
+.tag.ign { background: rgba(var(--bone-rgb), 0.08); color: var(--bone); }
 
 /* ---------- Season titles ---------- */
 
@@ -851,7 +900,7 @@ a { color: inherit; }
 .rank-row .wr { text-align: right; font-weight: 700; font-variant-numeric: tabular-nums; }
 
 /* Win-rate meter: diverging around 50% (pink below, teal above) */
-.wr-meter { position: relative; height: 8px; background: rgba(233, 241, 240, 0.08); border-radius: 2px; }
+.wr-meter { position: relative; height: 8px; background: rgba(var(--bone-rgb), 0.08); border-radius: 2px; }
 .wr-meter::after { content: ""; position: absolute; left: 50%; top: -3px; bottom: -3px; width: 1px; background: var(--ash); }
 .wr-meter > span { position: absolute; top: 0; bottom: 0; border-radius: 2px; }
 
@@ -958,7 +1007,8 @@ a { color: inherit; }
   justify-content: center;
 }
 
-.site-footer a { color: var(--bone); text-decoration-color: var(--pink); }
+.site-footer a { color: var(--pink); text-decoration: none; }
+.site-footer a:hover { text-decoration: underline; }
 
 /* ---------- Tooltip & toast ---------- */
 
@@ -1189,7 +1239,7 @@ a { color: inherit; }
 .cal-legend .swatch.siege { background: var(--k-siege); }
 .cal-legend .swatch.raid { background: var(--k-raid); }
 .cal-legend .swatch.event { background: var(--k-event); }
-.cal-legend .swatch.holiday { background: var(--k-holiday); border-radius: 50%; }
+.cal-legend .swatch.holiday { background: var(--k-holiday); }
 .cal-months { display: grid; gap: 18px; }
 .cal-month h4 { margin: 0 0 8px; font-family: var(--font-title); font-weight: 600; font-size: var(--t-m); }
 .cal-grid { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 4px; }
@@ -1555,7 +1605,7 @@ a { color: inherit; }
 .outcome { font-size: var(--t-xs); font-weight: 700; padding: 2px 8px; border-radius: 4px; }
 .outcome.win { background: rgba(14, 163, 174, 0.2); color: var(--teal-bright); }
 .outcome.loss { background: rgba(255, 46, 136, 0.18); color: var(--pink); }
-.outcome.draw { background: rgba(233, 241, 240, 0.08); color: var(--ash); }
+.outcome.draw { background: rgba(var(--bone-rgb), 0.08); color: var(--ash); }
 
 .encounter-bouts { display: none; padding: 0 14px 12px; }
 .encounter.expanded .encounter-bouts { display: block; }
@@ -1654,6 +1704,7 @@ a.bracket-launch:hover { border-color: var(--pink); background: var(--surface-ra
 
 @media (max-width: 1080px) {
   .menu-toggle { display: flex; }
+  .theme-toggle-icon { order: 0; margin-left: auto; }
 
   .hud-nav {
     position: fixed;
