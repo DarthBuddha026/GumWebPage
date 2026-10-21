@@ -1059,13 +1059,23 @@
 
   // Pages: the dashboard at /, or the schedule at /Schedules (vercel.json serves index.html there).
   // Only switching pages scrolls to the top, so in-page "#" links (like the map popups') don't jump.
+  // Switching slides the pages sideways (a View Transition, styled by data-slide in the CSS); the
+  // first load, reduced motion and browsers without View Transitions just swap.
   function route() {
     // Old #schedule links still land on the schedule.
     if (location.hash === "#schedule") history.replaceState(null, "", "/Schedules");
     const page = /^\/schedules\/?$/i.test(location.pathname) ? "schedule" : "dashboard";
     $$("[data-page-link]").forEach((a) => a.classList.toggle("active", a.dataset.pageLink === page));
     if (page === state.page) return;
+    const first = !state.page;
     state.page = page;
+    if (first || !document.startViewTransition || matchMedia("(prefers-reduced-motion: reduce)").matches) return showPage(page);
+    const root = document.documentElement;
+    root.dataset.slide = page === "schedule" ? "forward" : "back";
+    document.startViewTransition(() => showPage(page)).finished.finally(() => delete root.dataset.slide);
+  }
+
+  function showPage(page) {
     closeMobileMenu();
     $("#dashboard").classList.toggle("hidden", page !== "dashboard");
     $("#schedule-page").classList.toggle("hidden", page !== "schedule");

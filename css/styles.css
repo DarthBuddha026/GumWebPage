@@ -75,6 +75,18 @@
 ::view-transition-old(root),
 ::view-transition-new(root) { animation: none; mix-blend-mode: normal; }
 ::view-transition-group(theme-wipe-line) { animation: none; z-index: 2; }
+
+/* Page switches (app.js route) slide sideways: forward into Schedules, back to the dashboard.
+   The header gets its own layer only while sliding, so it stays put (and the theme wipe still covers it). */
+:root[data-slide] .hud { view-transition-name: hud; }
+:root[data-slide="forward"]::view-transition-old(root) { animation: slide-out-left 0.9s cubic-bezier(0.4, 0, 0.2, 1) both; }
+:root[data-slide="forward"]::view-transition-new(root) { animation: slide-in-right 0.9s cubic-bezier(0.4, 0, 0.2, 1) both; }
+:root[data-slide="back"]::view-transition-old(root) { animation: slide-out-right 0.9s cubic-bezier(0.4, 0, 0.2, 1) both; }
+:root[data-slide="back"]::view-transition-new(root) { animation: slide-in-left 0.9s cubic-bezier(0.4, 0, 0.2, 1) both; }
+@keyframes slide-out-left { to { transform: translateX(-100%); } }
+@keyframes slide-in-right { from { transform: translateX(100%); } }
+@keyframes slide-out-right { to { transform: translateX(100%); } }
+@keyframes slide-in-left { from { transform: translateX(-100%); } }
 .theme-wipe-line {
   view-transition-name: theme-wipe-line;
   position: fixed;
