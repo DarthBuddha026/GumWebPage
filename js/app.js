@@ -459,31 +459,21 @@
     });
   }
 
-  // The schedule as month calendars: match days are marked by kind (siege, raid, other), and the
-  // selected day's details and match-ups show underneath. Undated match days are listed after the months.
+  // The schedule page: a one-month calendar (match days marked by kind; the selected day's details show
+  // under it), the next Weekly Pod, and the next Guild Siege with its match-ups. Undated days sit under the calendar.
   function renderSchedule() {
     const weeks = state.raw.weeks || [];
     if (!weeks.length) {
       $("#schedule-list").innerHTML = emptyState("fa-calendar", "No schedule yet", "Match days appear here once they're set.");
       return;
     }
-    if (state.scheduleDay == null || !weeks[state.scheduleDay]) {
-      const current = weeks.findIndex((w) => w.label === state.currentWeek);
-      state.scheduleDay = Math.max(current, 0);
-    }
+    if (!weeks[state.scheduleDay]) state.scheduleDay = null;
     const kind = (w) => (/siege/i.test(w.label) ? "siege" : /raid/i.test(w.label) ? "raid" : "event");
     const iso = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
     const today = iso(new Date());
     // Philippine holidays from CFG.holidays: { date, name, type: "regular" | "special" }.
     const holidayOn = new Map((CFG.holidays || []).map((h) => [h.date, h]));
     const holidayTag = (h) => `<span class="cal-holiday ${h.type === "regular" ? "regular" : ""}" title="${esc(`${h.name} (${h.type === "regular" ? "regular holiday" : "special non-working day"})`)}">${esc(h.name)}</span>`;
-    // Under each month, the holidays in full (names are cut short inside the day boxes on phones).
-    const monthHolidays = (y, m) => {
-      const list = (CFG.holidays || []).filter((h) => h.date.startsWith(`${y}-${String(m).padStart(2, "0")}`));
-      return list.length
-        ? `<ul class="cal-holidays">${list.map((h) => `<li class="${h.type === "regular" ? "regular" : ""}"><b>${esc(new Date(`${h.date}T00:00:00`).toLocaleDateString(undefined, { month: "short", day: "numeric" }))}</b> ${esc(h.name)} <span>${h.type === "regular" ? "Regular holiday" : "Special non-working day"}</span></li>`).join("")}</ul>`
-        : "";
-    };
     const byDate = new Map();
     weeks.forEach((w, i) => w.date && byDate.set(w.date, [...(byDate.get(w.date) || []), i]));
     const dayButton = (i, inner) => {
@@ -492,20 +482,17 @@
     };
 
     const w = weeks[state.scheduleDay];
-    const fixtures = state.raw.matches.filter((m) => m.week === w.label);
-    const status = w.progress >= 100 ? "Complete" : w.progress > 0 ? `${w.progress}% played` : "Upcoming";
-    const detail = `
-      <section class="cal-detail ${kind(w)}" aria-live="polite">
-        <h4>${esc(w.label)}</h4>
-        ${holidayOn.has(w.date) ? `<p class="cal-holiday-note"><i class="fas fa-flag" aria-hidden="true"></i> ${esc(holidayOn.get(w.date).name)}, ${holidayOn.get(w.date).type === "regular" ? "a regular holiday" : "a special non-working day"}</p>` : ""}
-        <p class="cal-meta"><span>${w.date ? esc(longDate(w.date)) : "Date to be set"}</span>${w.location ? `<span><i class="fas fa-location-dot" aria-hidden="true"></i> ${esc(w.location)}</span>` : ""}${kind(w) === "siege" || fixtures.length ? `<span>${plural(fixtures.length, "team match", "team matches")}</span>` : ""}<span>${esc(status)}</span></p>
-        ${fixtures.length
-          ? `<ul class="fixtures">${fixtures.map((m, j) => (m.round && m.round !== fixtures[j - 1]?.round ? `<li class="fixture-round">Round ${m.round}</li>` : "") + fixtureRow(m)).join("")}</ul>`
-          : kind(w) === "siege" ? `<p class="muted">Match-ups haven't been set yet.</p>` : ""}
+    const status = (x) => (x.progress >= 100 ? "Complete" : x.progress > 0 ? `${x.progress}% played` : "Upcoming");
+    const detailFor = (x) => `
+      <section class="cal-detail ${kind(x)}" aria-live="polite">
+        <h4>${esc(x.label)}</h4>
+        ${holidayOn.has(x.date) ? `<p class="cal-holiday-note"><i class="fas fa-flag" aria-hidden="true"></i> ${esc(holidayOn.get(x.date).name)}, ${holidayOn.get(x.date).type === "regular" ? "a regular holiday" : "a special non-working day"}</p>` : ""}
+        <p class="cal-meta"><span>${x.date ? esc(longDate(x.date)) : "Date to be set"}</span>${x.location ? `<span><i class="fas fa-location-dot" aria-hidden="true"></i> ${esc(x.location)}</span>` : ""}<span>${esc(status(x))}</span></p>
       </section>`;
-    // The details go right under the month of the selected day (or under the undated row).
-    const detailMonth = w.date ? w.date.slice(0, 7) : null;
-
+    const placeholder = `
+      <section class="cal-detail placeholder" aria-live="polite">
+        <p class="muted"><i class="fa-regular fa-hand-pointer" aria-hidden="true"></i> Pick a match day on the calendar to see its details here. Guild Sieges open in the siege panel.</p>
+      </section>`;
     const dated = weeks.filter((w) => w.date).map((w) => w.date).sort();
     const months = [];
     if (dated.length) {
@@ -513,47 +500,91 @@
       const [y1, m1] = dated.at(-1).split("-").map(Number);
       for (let y = y0, m = m0; y < y1 || (y === y1 && m <= m1); m === 12 ? ((m = 1), y++) : m++) months.push([y, m]);
     }
-    const weekdays = Array.from({ length: 7 }, (_, d) => new Date(2023, 0, 1 + d).toLocaleDateString(undefined, { weekday: "narrow" }));
-    const calendars = months
-      .map(([y, m]) => {
-        const first = new Date(y, m - 1, 1);
-        const days = new Date(y, m, 0).getDate();
-        const cells = Array.from({ length: first.getDay() }, () => '<span class="cal-day blank"></span>');
-        for (let d = 1; d <= days; d++) {
-          const date = iso(new Date(y, m - 1, d));
-          const events = byDate.get(date) || [];
-          const holiday = holidayOn.get(date);
-          const hTag = holiday ? holidayTag(holiday) : "";
-          cells.push(`
-            <div class="cal-day ${date === today ? "today" : ""} ${events.length ? "has-event" : ""} ${holiday ? "holiday" : ""}">
-              ${events.length ? events.map((i) => dayButton(i, `<span class="cal-num">${d}</span><span class="cal-label">${esc(weeks[i].label)}</span>${hTag}`)).join("") : `<span class="cal-num">${d}</span>${hTag}`}
-            </div>`);
-        }
-        return `
-          <section class="cal-month">
-            <h4>${esc(first.toLocaleDateString(undefined, { month: "long", year: "numeric" }))}</h4>
-            <div class="cal-grid">
-              ${weekdays.map((d) => `<span class="cal-weekday" aria-hidden="true">${esc(d)}</span>`).join("")}
-              ${cells.join("")}
-            </div>
-            ${monthHolidays(y, m)}
-          </section>
-          ${detailMonth === `${y}-${String(m).padStart(2, "0")}` ? detail : ""}`;
-      })
-      .join("");
+    const ym = (y, m) => `${y}-${String(m).padStart(2, "0")}`;
+    // Start on this month (or the first month with match days); the arrows move from there.
+    if (state.scheduleMonth == null || !months[state.scheduleMonth]) {
+      const now = months.findIndex(([y, m]) => ym(y, m) === today.slice(0, 7));
+      state.scheduleMonth = now >= 0 ? now : 0;
+    }
+    // Sunday first; Thursday and Saturday get two letters so they differ from Tuesday and Sunday.
+    const weekdays = ["S", "M", "T", "W", "TH", "F", "ST"];
+    const monthGrid = ([y, m]) => {
+      const first = new Date(y, m - 1, 1);
+      const days = new Date(y, m, 0).getDate();
+      const cells = Array.from({ length: first.getDay() }, () => '<span class="cal-day blank"></span>');
+      for (let d = 1; d <= days; d++) {
+        const date = iso(new Date(y, m - 1, d));
+        const events = byDate.get(date) || [];
+        const holiday = holidayOn.get(date);
+        const hTag = holiday ? holidayTag(holiday) : "";
+        cells.push(`
+          <div class="cal-day ${date === today ? "today" : ""} ${events.length ? "has-event" : ""} ${holiday ? "holiday" : ""}">
+            ${events.length ? events.map((i) => dayButton(i, `<span class="cal-num">${d}</span><span class="cal-label">${esc(weeks[i].label)}</span>${hTag}`)).join("") : `<span class="cal-num">${d}</span>${hTag}`}
+          </div>`);
+      }
+      return `
+        <div class="cal-grid">
+          ${weekdays.map((d) => `<span class="cal-weekday" aria-hidden="true">${esc(d)}</span>`).join("")}
+          ${cells.join("")}
+        </div>`;
+    };
+    const shown = months[state.scheduleMonth];
+    const monthTitle = shown ? new Date(shown[0], shown[1] - 1, 1).toLocaleDateString(undefined, { month: "long", year: "numeric" }) : "No dates yet";
+    const undated = weeks.map((x, i) => i).filter((i) => !weeks[i].date);
+    // The selected day's details show under the calendar when it's in the month on screen (or undated).
+    // A selected Guild Siege shows in the siege panel instead.
+    const showDetail = Boolean(w) && kind(w) !== "siege" && (w.date ? Boolean(shown) && w.date.startsWith(ym(...shown)) : true);
 
-    const undated = weeks.map((w, i) => i).filter((i) => !weeks[i].date);
+    // The next Weekly Pod and Guild Siege from today, with a countdown.
+    const next = (test) => weeks.filter((x) => test(x) && x.date && x.date >= today && x.progress < 100).sort((p, q) => p.date.localeCompare(q.date))[0];
+    const countdown = (date) => {
+      const days = Math.round((new Date(`${date}T00:00:00`) - new Date(`${today}T00:00:00`)) / 864e5);
+      return days === 0 ? "Today" : days === 1 ? "Tomorrow" : days === -1 ? "Yesterday" : days < 0 ? `${-days} days ago` : `In ${days} days`;
+    };
+    const upcoming = (x, kicker) => `
+      <p class="sched-kicker">${esc(kicker)}</p>
+      <h3 class="sched-title">${esc(x.label)}</h3>
+      <p class="sched-when">
+        ${x.date ? `<span class="sched-countdown">${esc(x.progress >= 100 ? "Complete" : countdown(x.date))}</span>` : ""}
+        <span><i class="fa-regular fa-calendar" aria-hidden="true"></i> ${x.date ? esc(longDate(x.date)) : "Date to be set"}</span>
+        ${x.location ? `<span><i class="fas fa-location-dot" aria-hidden="true"></i> ${esc(x.location)}</span>` : ""}
+        ${holidayOn.has(x.date) ? `<span class="cal-holiday-note"><i class="fas fa-flag" aria-hidden="true"></i> ${esc(holidayOn.get(x.date).name)}</span>` : ""}
+      </p>`;
+    const none = (kicker, text) => `<p class="sched-kicker">${esc(kicker)}</p><p class="muted">${esc(text)}</p>`;
+    const pod = next((x) => /pod/i.test(x.label));
+    // The siege panel shows the Guild Siege picked on the calendar, or else the next one.
+    const nextSiege = next((x) => kind(x) === "siege");
+    const siege = w && kind(w) === "siege" ? w : nextSiege;
+    const siegeFixtures = siege ? state.raw.matches.filter((m) => m.week === siege.label) : [];
+    const siegeMatchups = siegeFixtures.length
+      ? `<ul class="fixtures">${siegeFixtures.map((m, j) => (m.round && m.round !== siegeFixtures[j - 1]?.round ? `<li class="fixture-round">Round ${m.round}</li>` : "") + fixtureRow(m)).join("")}</ul>`
+      : `<p class="muted">Match-ups haven't been set yet.</p>`;
 
     $("#schedule-list").innerHTML = `
-      <ul class="cal-legend" aria-label="Key">
-        <li><span class="swatch siege"></span>Guild Siege</li>
-        <li><span class="swatch raid"></span>Grand Raid</li>
-        <li><span class="swatch event"></span>Other match day</li>
-        <li><span class="swatch holiday"></span>PH holiday</li>
-      </ul>
-      <div class="cal-months">${calendars}</div>
-      ${undated.length ? `<div class="cal-undated"><span class="muted">Date to be set:</span>${undated.map((i) => dayButton(i, `<span class="cal-label">${esc(weeks[i].label)}</span>`)).join("")}</div>` : ""}
-      ${detailMonth ? "" : detail}`;
+      <div class="sched-layout">
+        <section class="sched-panel sched-cal" aria-label="Calendar">
+          <div class="cal-nav">
+            <button class="icon-btn" data-schedule-month="-1" aria-label="Previous month" ${state.scheduleMonth > 0 ? "" : "disabled"}><i class="fas fa-chevron-left" aria-hidden="true"></i></button>
+            <h2>${esc(monthTitle)}</h2>
+            <button class="icon-btn" data-schedule-month="1" aria-label="Next month" ${state.scheduleMonth < months.length - 1 ? "" : "disabled"}><i class="fas fa-chevron-right" aria-hidden="true"></i></button>
+          </div>
+          <ul class="cal-legend" aria-label="Key">
+            <li><span class="swatch siege"></span>Guild Siege</li>
+            <li><span class="swatch raid"></span>Grand Raid</li>
+            <li><span class="swatch event"></span>Other match day</li>
+            <li><span class="swatch holiday"></span>PH holiday</li>
+          </ul>
+          ${shown ? monthGrid(shown) : ""}
+          ${undated.length ? `<div class="cal-undated"><span class="muted">Date to be set:</span>${undated.map((i) => dayButton(i, `<span class="cal-label">${esc(weeks[i].label)}</span>`)).join("")}</div>` : ""}
+          ${showDetail ? detailFor(w) : placeholder}
+        </section>
+        <section class="sched-panel sched-pod" aria-label="Next Weekly Pod">
+          ${pod ? upcoming(pod, "Upcoming Weekly Pod") : none("Upcoming Weekly Pod", "No Weekly Pod coming up.")}
+        </section>
+        <section class="sched-panel sched-siege" aria-label="Next Guild Siege">
+          ${siege ? upcoming(siege, siege === nextSiege ? "Upcoming Guild Siege" : "Guild Siege") + siegeMatchups : none("Upcoming Guild Siege", "No Guild Siege coming up.")}
+        </section>
+      </div>`;
   }
 
   // One match-up: both guilds, with the score once it's played (bout wins, or a default win).
@@ -973,6 +1004,8 @@
     closeMobileMenu();
     $("#dashboard").classList.toggle("hidden", page !== "dashboard");
     $("#schedule-page").classList.toggle("hidden", page !== "schedule");
+    // On desktop the schedule page fits the screen (see body.on-schedule in the CSS).
+    document.body.classList.toggle("on-schedule", page === "schedule");
     window.scrollTo({ top: 0, behavior: "instant" });
     // The map can't measure itself while hidden, so redraw it once the dashboard is back.
     if (page === "dashboard" && state.map) renderMap();
@@ -1660,12 +1693,18 @@
         return toast(`${info.name}: ${info.text}`);
       }
 
+      const month = e.target.closest("[data-schedule-month]");
+      if (month) {
+        state.scheduleMonth += Number(month.dataset.scheduleMonth);
+        return renderSchedule();
+      }
+
       const day = e.target.closest("[data-schedule-day]");
       if (day) {
         state.scheduleDay = Number(day.dataset.scheduleDay);
         renderSchedule();
-        // The details sit under the months; bring them into view.
-        return $(".cal-detail").scrollIntoView({ behavior: "smooth", block: "nearest" });
+        // Bring the details into view: under the calendar, or the siege panel for a Guild Siege.
+        return ($(".cal-detail") || $(".sched-siege")).scrollIntoView({ behavior: "smooth", block: "nearest" });
       }
 
       const toggle = e.target.closest("[data-toggle-group]");
