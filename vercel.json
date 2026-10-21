@@ -1,0 +1,7 @@
+{
+  "trailingSlash": false,
+  "rewrites": [
+    { "source": "/Schedules", "destination": "/index.html" },
+    { "source": "/schedules", "destination": "/index.html" }
+  ]
+}

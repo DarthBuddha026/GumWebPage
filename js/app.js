@@ -1057,10 +1057,12 @@
     transition.finished.finally(() => line.remove());
   }
 
-  // Pages: the dashboard, or the schedule at #schedule. Only switching pages scrolls to the top,
-  // so in-page "#" links (like the map popups') don't jump.
+  // Pages: the dashboard at /, or the schedule at /Schedules (vercel.json serves index.html there).
+  // Only switching pages scrolls to the top, so in-page "#" links (like the map popups') don't jump.
   function route() {
-    const page = location.hash === "#schedule" ? "schedule" : "dashboard";
+    // Old #schedule links still land on the schedule.
+    if (location.hash === "#schedule") history.replaceState(null, "", "/Schedules");
+    const page = /^\/schedules\/?$/i.test(location.pathname) ? "schedule" : "dashboard";
     $$("[data-page-link]").forEach((a) => a.classList.toggle("active", a.dataset.pageLink === page));
     if (page === state.page) return;
     state.page = page;
@@ -1681,6 +1683,15 @@
   // ---------------------------------------------------------------------------
 
   function bindEvents() {
+    // Page links switch pages in place (no reload); ctrl/cmd-click still opens a new tab.
+    document.addEventListener("click", (e) => {
+      const a = e.target.closest("a[data-route]");
+      if (!a || e.ctrlKey || e.metaKey || e.shiftKey) return;
+      e.preventDefault();
+      if (a.pathname !== location.pathname) history.pushState(null, "", a.pathname);
+      route();
+    });
+
     $("#menu-toggle").addEventListener("click", () => {
       const open = !$("#navbar-menu").classList.contains("active");
       $("#menu-toggle").classList.toggle("is-active", open);
@@ -1829,7 +1840,7 @@
     bindTooltip();
     syncThemeToggle();
     route();
-    window.addEventListener("hashchange", route);
+    window.addEventListener("popstate", route);
     try {
       const raw = await loadData();
       // After loading, so the season number and venue from the admin are used.

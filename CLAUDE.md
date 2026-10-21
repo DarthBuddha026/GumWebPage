@@ -13,7 +13,7 @@ The league admin (organizer login, guild/blader editing, schedule, score entry) 
 Serve the folder over HTTP rather than opening `index.html` as a `file://`. The service worker only registers on `http(s)`, and `fetch` needs a real origin:
 
 ```
-npx serve .        # or: python -m http.server 8000
+npx serve -s .     # -s serves index.html for /Schedules, like vercel.json does
 ```
 
 Third-party libraries load from CDNs: Leaflet and markercluster (unpkg/cdnjs), Font Awesome, Google Fonts, and html2canvas, which is fetched lazily the first time a profile is shared.

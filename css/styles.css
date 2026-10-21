@@ -1162,7 +1162,7 @@ a { color: inherit; }
 
 /* Schedule: month calendars with match days marked by kind; the selected day's match-ups show below */
 .schedule-cal { --k-siege: var(--pink); --k-raid: var(--teal); --k-event: var(--f-extreme); --k-holiday: var(--f-over); }
-/* The schedule page (#schedule) */
+/* The schedule page (/Schedules) */
 .schedule-page .section { padding-top: 40px; }
 /* Three panels: the next Weekly Pod above the calendar on the left, and the next (or picked) Guild Siege
    down the right. Phones stack them with the two "upcoming" panels first. */
