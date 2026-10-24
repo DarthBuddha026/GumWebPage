@@ -1340,8 +1340,9 @@
   }
 
   // Draws `target` to an image and opens the share preview. `onclone` can adjust the copy
-  // that gets drawn (the page itself is left alone).
-  async function shareCard(target, fileName, onclone) {
+  // that gets drawn (the page itself is left alone). With `size` ([width, height]) the drawing is
+  // fitted, centred, inside an image of exactly that size.
+  async function shareCard(target, fileName, onclone, size) {
     if (!target) return;
     toast("Making the card…");
     try {
@@ -1353,15 +1354,17 @@
     }
     try {
       // Share images always use the dark theme, whatever the visitor is viewing in.
-      const canvas = await html2canvas(target, {
+      let canvas = await html2canvas(target, {
         backgroundColor: "#000000",
-        scale: 2,
+        // Drawn larger when it will be fitted into a fixed size, so it's scaled down there, not up.
+        scale: size ? 3 : 2,
         useCORS: true,
         onclone: (doc) => {
           doc.documentElement.dataset.theme = "dark";
           if (onclone) onclone(doc);
         },
       });
+      if (size) canvas = fitCanvas(canvas, ...size);
       state.shareBlob = await new Promise((resolve) => canvas.toBlob(resolve, "image/png"));
       state.shareFileName = fileName;
       $("#share-image").src = canvas.toDataURL("image/png");
@@ -1372,6 +1375,22 @@
     }
   }
 
+  // A new canvas of exactly w x h: black, with `src` scaled to fit inside a margin and centred.
+  function fitCanvas(src, w, h, margin = 60) {
+    const out = document.createElement("canvas");
+    out.width = w;
+    out.height = h;
+    const g = out.getContext("2d");
+    g.fillStyle = "#000000";
+    g.fillRect(0, 0, w, h);
+    const k = Math.min((w - margin * 2) / src.width, (h - margin * 2) / src.height);
+    const dw = Math.round(src.width * k);
+    const dh = Math.round(src.height * k);
+    g.imageSmoothingQuality = "high";
+    g.drawImage(src, Math.round((w - dw) / 2), Math.round((h - dh) / 2), dw, dh);
+    return out;
+  }
+
   function shareProfile() {
     const key = state.search.stack.at(-1)?.arg || "blader";
     // .share-capture shrinks the achievement cards in the image on phones (see the CSS). It goes on the
@@ -1380,7 +1399,8 @@
     const el = $("#profile-capture");
     const done = () => el.classList.remove("share-capture");
     el.classList.add("share-capture");
-    return shareCard(el, `${key}-profile.png`, done).finally(done);
+    // A 1080x1920 portrait image, the size of a phone story.
+    return shareCard(el, `${key}-profile.png`, done, [1080, 1920]).finally(done);
   }
 
   // The guild's logo and name live in the modal header, so the card gets its own heading.
