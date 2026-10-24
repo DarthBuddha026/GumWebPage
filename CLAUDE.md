@@ -41,7 +41,7 @@ The scoring follows the GGW2 handbook, and its values live in `data.js` (`eventE
 ### Domain rules (in app.js)
 - The finish types are `spin` (shown as "Stamina"), `over`, `burst` and `extreme`. The `FINISHES` map at the top of app.js and the `--f-*` CSS variables must stay in sync with `CFG.finishPoints`.
 - To be ranked, a player needs `minGames` games **and** attendance of at least `eligibilityAttendance` of their guild's matches.
-- Player ordering (`leagueSort`) is MVP score, then win rate, then point diff. Guild ordering (`teamSort`) is match wins, then win rate, then set diff, then point diff.
+- Player ordering (`leagueSort`) is MVP score, then win rate, then point diff. Guild ordering (`teamSort`) follows the Challonge tie breaks: match wins, then game (set) wins, then point diff, then points scored, then Median-Buchholz (opponents' match wins, best and worst dropped once there are 3+), then game wins over the other guilds still tied (`rankTeams`), then name. Self-check: `node test/team-sort.js`.
 - When only one bracket is configured, bracket labels and filters are hidden (`SINGLE_BRACKET`).
 
 ### UI conventions

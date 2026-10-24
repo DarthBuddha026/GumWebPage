@@ -252,9 +252,34 @@
     return b.mvp - a.mvp || b.winRate - a.winRate || b.ptDiff - a.ptDiff || a.name.localeCompare(b.name);
   }
 
-  // Guild tie-break: match wins > win rate > set diff > points diff
+  // Guild ranking, as in the Challonge bracket: match wins, then game wins, points difference,
+  // points scored and Median-Buchholz. Guilds still level go to rankTeams' head-to-head.
   function teamSort(a, b) {
-    return b.wins - a.wins || b.winRate - a.winRate || b.setDiff - a.setDiff || b.ptDiff - a.ptDiff || a.name.localeCompare(b.name);
+    return b.wins - a.wins || b.setWins - a.setWins || b.ptDiff - a.ptDiff || b.points - a.points || b.buchholz - a.buchholz;
+  }
+
+  // Sorts the guilds by teamSort; each group still level on all of it is ordered by game wins over
+  // the other guilds in that group (head-to-head), then by name.
+  function rankTeams(teams) {
+    const sorted = teams.slice().sort(teamSort);
+    for (let i = 0; i < sorted.length; ) {
+      let j = i + 1;
+      while (j < sorted.length && teamSort(sorted[i], sorted[j]) === 0) j++;
+      const group = sorted.slice(i, j);
+      const vs = (t) => group.reduce((n, o) => n + (t.gamesVs[o.name] || 0), 0);
+      group.sort((a, b) => vs(b) - vs(a) || a.name.localeCompare(b.name));
+      sorted.splice(i, group.length, ...group);
+      i = j;
+    }
+    return sorted;
+  }
+
+  // Median-Buchholz: the match wins of every opponent faced (once per match), leaving out the best and
+  // the worst when there are at least three.
+  function medianBuchholz(opponentWins) {
+    const w = opponentWins.slice().sort((a, b) => a - b);
+    const kept = w.length >= 3 ? w.slice(1, -1) : w;
+    return kept.reduce((sum, x) => sum + x, 0);
   }
 
   // The season's own match days (Grand Opening, Grand Raids, Guild Sieges). Other days on the admin's
@@ -275,7 +300,7 @@
     // the one in progress, else the latest played, else the first.
     state.currentSiege = computeCurrentWeek((raw.weeks || []).filter((w) => /siege/i.test(w.label)));
 
-    const teams = raw.teams.map((t) => ({ ...t, wins: 0, losses: 0, played: 0, points: 0, conceded: 0, setWins: 0, setLosses: 0 }));
+    const teams = raw.teams.map((t) => ({ ...t, wins: 0, losses: 0, played: 0, points: 0, conceded: 0, setWins: 0, setLosses: 0, opponents: [], gamesVs: {} }));
     const teamsByName = new Map(teams.map((t) => [t.name, t]));
 
     const players = raw.players.map((p) => ({
@@ -295,9 +320,10 @@
       if (m.defaultWinner) {
         const winner1 = m.defaultWinner === m.team1;
         m.result = { bouts1: 0, bouts2: 0, pts1: 0, pts2: 0, winner: m.defaultWinner, byDefault: true };
-        [[t1, winner1], [t2, !winner1]].forEach(([t, won]) => {
+        [[t1, winner1, t2], [t2, !winner1, t1]].forEach(([t, won, opp]) => {
           if (!t) return;
           t.played++;
+          if (opp) t.opponents.push(opp);
           if (won) t.wins++;
           else t.losses++;
         });
@@ -328,9 +354,13 @@
       const winner1 = b1 > b2 || (b1 === b2 && pts1 >= pts2);
       m.result = { bouts1: b1, bouts2: b2, pts1, pts2, winner: winner1 ? m.team1 : m.team2 };
 
-      [[t1, b1, b2, pts1, pts2, winner1], [t2, b2, b1, pts2, pts1, !winner1]].forEach(([t, bw, bl, pf, pa, won]) => {
+      [[t1, b1, b2, pts1, pts2, winner1, t2], [t2, b2, b1, pts2, pts1, !winner1, t1]].forEach(([t, bw, bl, pf, pa, won, opp]) => {
         if (!t) return;
         t.played++;
+        if (opp) {
+          t.opponents.push(opp);
+          t.gamesVs[opp.name] = (t.gamesVs[opp.name] || 0) + bw;
+        }
         t.setWins += bw;
         t.setLosses += bl;
         t.points += pf;
@@ -345,6 +375,7 @@
       t.setDiff = t.setWins - t.setLosses;
       t.ptDiff = t.points - t.conceded;
     });
+    teams.forEach((t) => (t.buchholz = medianBuchholz(t.opponents.map((o) => o.wins))));
 
     players.forEach((p) => {
       const team = teamsByName.get(p.team);
@@ -376,7 +407,7 @@
     // The required Guild EXP: the Guild EXP bar is full here, but guilds keep earning past it.
     state.expCap = raw.exp?.cap || 0;
 
-    state.teams = teams.slice().sort(teamSort);
+    state.teams = rankTeams(teams);
     state.teamsByName = teamsByName;
     state.players = players;
     state.playersByKey = playersByKey;
