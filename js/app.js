@@ -751,11 +751,11 @@
   function renderTitles() {
     const league = state.league;
     const best = (fn) => league.reduce((top, p) => (!top || fn(p) > fn(top) ? p : top), null);
+    // The top guild once it has played; the grid puts it beside Strongest Blader.
+    const topGuild = state.teams[0]?.played ? state.teams[0] : null;
     const rows = [
-      { title: "MVP Leader", p: league[0], value: (p) => fmt2(p.mvp), unit: "MVP score" },
-      { title: "Top Scorer", p: best((p) => p.overall.points), value: (p) => p.overall.points, unit: "points this season" },
-      { title: "Sharpest Blade", p: league.slice().sort((a, b) => b.winRate - a.winRate || b.mvp - a.mvp)[0], value: (p) => pct(p.winRate), unit: "win rate" },
-      { title: "Iron Wall", p: best((p) => p.overall.defense), value: (p) => fmt2(p.overall.conceded / p.overall.games), unit: "points given up per game" },
+      { title: "Strongest Blader", p: league[0], value: (p) => fmt2(p.mvp), unit: "MVP score" },
+      { title: "Guild Dominator", team: topGuild },
       { title: "Stamina King", finish: "spin", p: best((p) => p.overall.spinPG), value: (p) => fmt2(p.overall.spinPG), unit: "stamina finishes per game" },
       { title: "Overlord", finish: "over", p: best((p) => p.overall.overPG), value: (p) => fmt2(p.overall.overPG), unit: "over finishes per game" },
       { title: "Burst God", finish: "burst", p: best((p) => p.overall.burstPG), value: (p) => fmt2(p.overall.burstPG), unit: "burst finishes per game" },
@@ -765,6 +765,14 @@
     $("#titles-list").innerHTML = rows
       .map((r) => {
         const sw = r.finish ? `<span class="title-swatch" style="--sw:${FINISHES[r.finish].color}" aria-hidden="true"></span>` : "";
+        if (r.team) {
+          return `
+          <div class="title-row" data-open-team="${esc(r.team.name)}">
+            <dt>${esc(r.title)}</dt>
+            <dd class="holder">Held by <b>${esc(r.team.name)}</b></dd>
+            <dd class="score"><span class="value">${esc(record(r.team.wins, r.team.losses))}</span><span class="unit">match record</span></dd>
+          </div>`;
+        }
         if (!r.p) {
           return `<div class="title-row"><dt>${sw}${esc(r.title)}</dt><dd class="holder">Unclaimed</dd><dd class="score"><span class="value">–</span></dd></div>`;
         }
