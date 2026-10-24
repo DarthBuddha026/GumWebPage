@@ -1,10 +1,8 @@
-// Self-check for the guild ranking (teamSort, rankTeams and medianBuchholz in js/app.js). Run: node test/team-sort.js
+// Self-check for the guild ranking (rankTeams and medianBuchholz in js/data.js). Run: node test/team-sort.js
 const assert = require("assert");
-const fs = require("fs");
-const src = fs.readFileSync(__dirname + "/../js/app.js", "utf8");
-// app.js is one browser closure, so lift just these functions out of it.
-const fn = (name) => src.match(new RegExp(`function ${name}\\([\\s\\S]*?\\n  }`))[0];
-const { rankTeams, medianBuchholz } = new Function(`${fn("teamSort")}\n${fn("rankTeams")}\n${fn("medianBuchholz")}\nreturn { rankTeams, medianBuchholz };`)();
+global.window = {};
+require("../js/data.js");
+const { rankTeams, medianBuchholz } = window.leagueTools;
 
 // Median-Buchholz drops the best and worst opponent once there are three or more.
 assert.strictEqual(medianBuchholz([]), 0);
@@ -24,5 +22,22 @@ assert.strictEqual(
   "D C B A"
 );
 assert.strictEqual(order(g("B", 2, 6, 4, 22, 5), g("A", 2, 6, 4, 22, 5)), "A B"); // then name
+
+// leagueStats: guild records and blader stats from the played fixtures.
+const bout = (p1, p2, p1Pts, p2Pts, rounds) => ({ p1, p2, p1Pts, p2Pts, rounds });
+const st = window.leagueTools.leagueStats(
+  [{ name: "A" }, { name: "B" }],
+  [{ key: "a", name: "Ann", team: "A" }, { key: "b", name: "Bo", team: "B" }],
+  [
+    { id: "m1", team1: "A", team2: "B", bouts: [bout("a", "b", 4, 1, [{ winner: 1, finish: "extreme" }, { winner: 2, finish: "spin" }, { winner: 1, finish: "spin" }])] },
+    { id: "m2", team1: "B", team2: "A", bouts: [], defaultWinner: "B" }, // default: guild records only
+    { id: "m3", team1: "A", team2: "B", bouts: [] }, // not played
+  ]
+);
+assert.deepStrictEqual(st.teams.map((t) => [t.name, t.wins, t.losses, t.setWins]), [["A", 1, 1, 1], ["B", 1, 1, 0]]);
+const ann = st.playersByKey.get("a");
+assert.deepStrictEqual([ann.overall.games, ann.overall.extreme, ann.overall.spin, ann.attendance], [1, 1, 1, 0.5]);
+assert.strictEqual(st.league.length, 0); // under minGames
+assert.strictEqual(st.players[1].overall.spin, 1);
 
 console.log("team-sort ok");

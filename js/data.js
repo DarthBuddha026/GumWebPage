@@ -196,5 +196,172 @@ window.LEAGUE_CONFIG = {
     return out;
   }
 
-  window.leagueTools = { roundRobin, guildExp, entryExp, purchaseExp };
+  // ----- Blader and guild standings (the dashboard and the admin's Leaderboards tab) -----
+
+  function emptyLine() {
+    return { games: 0, wins: 0, losses: 0, points: 0, conceded: 0, spin: 0, over: 0, burst: 0, extreme: 0 };
+  }
+
+  function addBout(line, myPts, oppPts, rounds, side) {
+    line.games++;
+    line.points += myPts;
+    line.conceded += oppPts;
+    if (myPts > oppPts) line.wins++;
+    else if (myPts < oppPts) line.losses++;
+    rounds.forEach((r) => {
+      if (r.winner === side && line[r.finish] !== undefined) line[r.finish]++;
+    });
+  }
+
+  function finalizeLine(line, cfg) {
+    const g = line.games || 0;
+    line.winRate = g ? line.wins / g : 0;
+    line.ppg = g ? line.points / g : 0;
+    Object.keys(cfg.finishPoints).forEach((f) => (line[`${f}PG`] = g ? line[f] / g : 0));
+    line.defense = g ? cfg.pointsToWin - line.conceded / g : 0;
+    line.ptDiff = line.points - line.conceded;
+    return line;
+  }
+
+  function mvpScore(line, attendance) {
+    if (!line.games) return 0;
+    // Smoothed win rate so a 2–0 record doesn't outrank a 9–1 record.
+    const smoothedWR = (line.wins + 1) / (line.games + 2);
+    return smoothedWR * 6 + line.ppg * 1 + line.extremePG * 1.5 + Math.max(line.defense, 0) * 0.5 + attendance * 2;
+  }
+
+  // League tie-break: MVP score > win rate > point differential
+  function leagueSort(a, b) {
+    return b.mvp - a.mvp || b.winRate - a.winRate || b.ptDiff - a.ptDiff || a.name.localeCompare(b.name);
+  }
+
+  // Guild ranking, as in the Challonge bracket: match wins, then game wins, points difference,
+  // points scored and Median-Buchholz. Guilds still level go to rankTeams' head-to-head.
+  function teamSort(a, b) {
+    return b.wins - a.wins || b.setWins - a.setWins || b.ptDiff - a.ptDiff || b.points - a.points || b.buchholz - a.buchholz;
+  }
+
+  // Sorts the guilds by teamSort; each group still level on all of it is ordered by game wins over
+  // the other guilds in that group (head-to-head), then by name.
+  function rankTeams(teams) {
+    const sorted = teams.slice().sort(teamSort);
+    for (let i = 0; i < sorted.length; ) {
+      let j = i + 1;
+      while (j < sorted.length && teamSort(sorted[i], sorted[j]) === 0) j++;
+      const group = sorted.slice(i, j);
+      const vs = (t) => group.reduce((n, o) => n + (t.gamesVs[o.name] || 0), 0);
+      group.sort((a, b) => vs(b) - vs(a) || a.name.localeCompare(b.name));
+      sorted.splice(i, group.length, ...group);
+      i = j;
+    }
+    return sorted;
+  }
+
+  // Median-Buchholz: the match wins of every opponent faced (once per match), leaving out the best and
+  // the worst when there are at least three.
+  function medianBuchholz(opponentWins) {
+    const w = opponentWins.slice().sort((a, b) => a - b);
+    const kept = w.length >= 3 ? w.slice(1, -1) : w;
+    return kept.reduce((sum, x) => sum + x, 0);
+  }
+
+  // Guild records and blader stats from the played fixtures. matches: [{ id, week, team1, team2, bouts, defaultWinner }]:
+  // `bouts` from final results only ({ p1, p2, p1Pts, p2Pts, rounds }), `defaultWinner` a guild name. Each played match
+  // gets a `result`. Bouts in the `weekly` week (a label) also go into each blader's `weekly` line.
+  // Returns { teams (ranked), teamsByName, players, playersByKey, league (eligible bladers, best MVP first) }.
+  function leagueStats(guilds, bladers, matches, { weekly } = {}, cfg = window.LEAGUE_CONFIG) {
+    const teams = guilds.map((t) => ({ ...t, wins: 0, losses: 0, played: 0, points: 0, conceded: 0, setWins: 0, setLosses: 0, opponents: [], gamesVs: {} }));
+    const teamsByName = new Map(teams.map((t) => [t.name, t]));
+
+    const players = bladers.map((p) => ({
+      ...p,
+      achievements: p.achievements || [],
+      overall: emptyLine(),
+      weekly: emptyLine(),
+      appearances: new Set(),
+    }));
+    const playersByKey = new Map(players.map((p) => [p.key, p]));
+
+    matches.forEach((m) => {
+      const t1 = teamsByName.get(m.team1);
+      const t2 = teamsByName.get(m.team2);
+
+      // Default/DQ wins count for the guilds' records only, not for blader stats.
+      if (m.defaultWinner) {
+        const winner1 = m.defaultWinner === m.team1;
+        m.result = { bouts1: 0, bouts2: 0, pts1: 0, pts2: 0, winner: m.defaultWinner, byDefault: true };
+        [[t1, winner1, t2], [t2, !winner1, t1]].forEach(([t, won, opp]) => {
+          if (!t) return;
+          t.played++;
+          if (opp) t.opponents.push(opp);
+          if (won) t.wins++;
+          else t.losses++;
+        });
+        return;
+      }
+
+      if (!m.bouts || !m.bouts.length) return;
+      let b1 = 0;
+      let b2 = 0;
+      let pts1 = 0;
+      let pts2 = 0;
+
+      m.bouts.forEach((bout) => {
+        pts1 += bout.p1Pts;
+        pts2 += bout.p2Pts;
+        if (bout.p1Pts > bout.p2Pts) b1++;
+        else if (bout.p2Pts > bout.p1Pts) b2++;
+
+        const rounds = bout.rounds || [];
+        [[playersByKey.get(bout.p1), bout.p1Pts, bout.p2Pts, 1], [playersByKey.get(bout.p2), bout.p2Pts, bout.p1Pts, 2]].forEach(([p, mine, theirs, side]) => {
+          if (!p) return;
+          addBout(p.overall, mine, theirs, rounds, side);
+          if (weekly && m.week === weekly) addBout(p.weekly, mine, theirs, rounds, side);
+          p.appearances.add(m.id);
+        });
+      });
+
+      const winner1 = b1 > b2 || (b1 === b2 && pts1 >= pts2);
+      m.result = { bouts1: b1, bouts2: b2, pts1, pts2, winner: winner1 ? m.team1 : m.team2 };
+
+      [[t1, b1, b2, pts1, pts2, winner1, t2], [t2, b2, b1, pts2, pts1, !winner1, t1]].forEach(([t, bw, bl, pf, pa, won, opp]) => {
+        if (!t) return;
+        t.played++;
+        if (opp) {
+          t.opponents.push(opp);
+          t.gamesVs[opp.name] = (t.gamesVs[opp.name] || 0) + bw;
+        }
+        t.setWins += bw;
+        t.setLosses += bl;
+        t.points += pf;
+        t.conceded += pa;
+        if (won) t.wins++;
+        else t.losses++;
+      });
+    });
+
+    teams.forEach((t) => {
+      t.winRate = t.played ? t.wins / t.played : 0;
+      t.setDiff = t.setWins - t.setLosses;
+      t.ptDiff = t.points - t.conceded;
+    });
+    teams.forEach((t) => (t.buchholz = medianBuchholz(t.opponents.map((o) => o.wins))));
+
+    players.forEach((p) => {
+      const team = teamsByName.get(p.team);
+      p.bracket = team ? team.bracket : "-";
+      finalizeLine(p.overall, cfg);
+      finalizeLine(p.weekly, cfg);
+      p.attendance = team && team.played ? Math.min(p.appearances.size / team.played, 1) : 0;
+      p.eligible = p.overall.games >= (cfg.minGames || 1) && p.attendance >= cfg.eligibilityAttendance;
+      p.mvp = mvpScore(p.overall, p.attendance);
+      p.weekly.mvp = mvpScore(p.weekly, 1);
+      p.winRate = p.overall.winRate;
+      p.ptDiff = p.overall.ptDiff;
+    });
+
+    return { teams: rankTeams(teams), teamsByName, players, playersByKey, league: players.filter((p) => p.eligible).sort(leagueSort) };
+  }
+
+  window.leagueTools = { roundRobin, guildExp, entryExp, purchaseExp, leagueStats, leagueSort, rankTeams, medianBuchholz };
 })();
