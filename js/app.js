@@ -1374,7 +1374,13 @@
 
   function shareProfile() {
     const key = state.search.stack.at(-1)?.arg || "blader";
-    return shareCard($("#profile-capture"), `${key}-profile.png`);
+    // .share-capture shrinks the achievement cards in the image on phones (see the CSS). It goes on the
+    // page itself only while html2canvas copies it, because html2canvas takes pseudo-element styles (the
+    // card frames and icons) from the page, not from its copy.
+    const el = $("#profile-capture");
+    const done = () => el.classList.remove("share-capture");
+    el.classList.add("share-capture");
+    return shareCard(el, `${key}-profile.png`, done).finally(done);
   }
 
   // The guild's logo and name live in the modal header, so the card gets its own heading.

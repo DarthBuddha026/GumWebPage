@@ -1526,6 +1526,18 @@ a { color: inherit; }
 .ach-card:not(.unlocked) .ach-emblem i { text-shadow: none; }
 .ach-card:not(.unlocked) .ach-name { color: #6f737a; }
 .ach-card:not(.unlocked) .ach-exp { border-color: rgba(233, 241, 240, 0.14); color: #6f737a; }
+/* Shared profile image on phones (shareProfile adds .share-capture to the copy): five small cards a row, as on desktop. */
+@media (max-width: 560px) {
+  .share-capture .ach-grid { grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 5px; }
+  .share-capture .ach-card { gap: 4px; padding: 8px 3px; border-width: 1px; border-radius: 7px; }
+  .share-capture .ach-card::after { inset: 3px; border-radius: 5px; }
+  .share-capture .ach-emblem { width: 30px; height: 30px; }
+  .share-capture .ach-emblem::before { inset: 5px; border-width: 1px; }
+  .share-capture .ach-emblem i { font-size: 0.85rem; }
+  .share-capture .ach-name { font-size: 0.5rem; }
+  .share-capture .ach-exp { margin-top: 0; padding: 0 4px; font-size: 0.5rem; }
+  .share-capture .ach-lock { top: 6px; right: 6px; font-size: 0.5rem; }
+}
 
 /* Guild Quest badges, under the roster */
 .guild-quests { margin-bottom: 8px; }
