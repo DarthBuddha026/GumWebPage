@@ -1222,6 +1222,7 @@
         return `
         <li>
           <button class="ach-card ${on ? "unlocked" : ""}" data-ach-info="${esc(a.id)}" aria-label="${esc(`${a.name}, ${on ? "unlocked" : "locked"}, +${a.exp} EXP. ${a.text}`)}">
+            <span class="ach-frame" aria-hidden="true"></span>
             <span class="ach-emblem" aria-hidden="true"><i class="fas ${esc(a.icon || "fa-medal")}"></i></span>
             <span class="ach-name">${esc(a.name)}</span>
             <span class="ach-exp">+${a.exp} EXP</span>
@@ -1291,7 +1292,7 @@
         </div>
         ${p.eligible ? "" : `<p class="section-note">Not ranked yet. Bladers need ${CFG.minGames || 1} games and at least half of their guild's matches.</p>`}
 
-        <div class="stat-block">
+        <div class="stat-block season-stats">
           <h5>Season stats</h5>
           ${statRow("MVP score", fmt2(p.mvp))}
           ${statRow("Games played", o.games)}
@@ -1359,6 +1360,8 @@
         // Drawn larger when it will be fitted into a fixed size, so it's scaled down there, not up.
         scale: size ? 3 : 2,
         useCORS: true,
+        // Fixed-size images use the desktop layout, whatever screen they're made on.
+        ...(size && { windowWidth: 1200 }),
         onclone: (doc) => {
           doc.documentElement.dataset.theme = "dark";
           if (onclone) onclone(doc);
@@ -1393,14 +1396,18 @@
 
   function shareProfile() {
     const key = state.search.stack.at(-1)?.arg || "blader";
-    // .share-capture shrinks the achievement cards in the image on phones (see the CSS). It goes on the
-    // page itself only while html2canvas copies it, because html2canvas takes pseudo-element styles (the
-    // card frames and icons) from the page, not from its copy.
-    const el = $("#profile-capture");
-    const done = () => el.classList.remove("share-capture");
-    el.classList.add("share-capture");
-    // A 1080x1920 portrait image, the size of a phone story.
-    return shareCard(el, `${key}-profile.png`, done, [1080, 1920]).finally(done);
+    // A 1080x1920 portrait image, the size of a phone story. The copy is laid out 600px wide so it fills
+    // the width (see .share-capture in the CSS).
+    return shareCard(
+      $("#profile-capture"),
+      `${key}-profile.png`,
+      (doc) => {
+        const el = doc.getElementById("profile-capture");
+        el.classList.add("share-capture");
+        el.style.width = "600px";
+      },
+      [1080, 1920]
+    );
   }
 
   // The guild's logo and name live in the modal header, so the card gets its own heading.

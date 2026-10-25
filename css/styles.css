@@ -1510,8 +1510,9 @@ a { color: inherit; }
   font: inherit;
   cursor: pointer;
 }
-/* Inner gold frame. Drawn with a border (not an inset shadow) so the shared profile image shows it too. */
-.ach-card::after { content: ""; position: absolute; inset: 4px; border: 1px solid rgba(227, 201, 143, 0.28); border-radius: 7px; pointer-events: none; }
+/* Inner gold frame. A real element with a border (not an inset shadow or ::after) so the shared profile
+   image draws it at the copy's size: html2canvas sizes pseudo-elements from the page. */
+.ach-frame { position: absolute; inset: 4px; border: 1px solid rgba(227, 201, 143, 0.28); border-radius: 7px; pointer-events: none; }
 .ach-emblem { position: relative; display: grid; place-items: center; width: 52px; height: 52px; }
 .ach-emblem::before { content: ""; position: absolute; inset: 7px; border: 2px solid var(--gold-dim); transform: rotate(45deg); background: rgba(227, 201, 143, 0.08); }
 .ach-emblem i { position: relative; font-size: 1.5rem; text-shadow: 0 0 12px rgba(227, 201, 143, 0.45); }
@@ -1521,23 +1522,15 @@ a { color: inherit; }
 .ach-lock { position: absolute; top: 10px; right: 12px; font-size: 0.75rem; color: var(--ash); }
 /* Locked cards are greyed with plain colours (the share image can't apply CSS filters). */
 .ach-card:not(.unlocked) { border-color: rgba(233, 241, 240, 0.14); background: linear-gradient(180deg, #26282e, #1c1d22); color: #5d6168; }
-.ach-card:not(.unlocked)::after { border-color: rgba(233, 241, 240, 0.08); }
+.ach-card:not(.unlocked) .ach-frame { border-color: rgba(233, 241, 240, 0.08); }
 .ach-card:not(.unlocked) .ach-emblem::before { border-color: rgba(233, 241, 240, 0.16); background: none; }
 .ach-card:not(.unlocked) .ach-emblem i { text-shadow: none; }
 .ach-card:not(.unlocked) .ach-name { color: #6f737a; }
 .ach-card:not(.unlocked) .ach-exp { border-color: rgba(233, 241, 240, 0.14); color: #6f737a; }
-/* Shared profile image on phones (shareProfile adds .share-capture to the copy): five small cards a row, as on desktop. */
-@media (max-width: 560px) {
-  .share-capture .ach-grid { grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 5px; }
-  .share-capture .ach-card { gap: 4px; padding: 8px 3px; border-width: 1px; border-radius: 7px; }
-  .share-capture .ach-card::after { inset: 3px; border-radius: 5px; }
-  .share-capture .ach-emblem { width: 30px; height: 30px; }
-  .share-capture .ach-emblem::before { inset: 5px; border-width: 1px; }
-  .share-capture .ach-emblem i { font-size: 0.85rem; }
-  .share-capture .ach-name { font-size: 0.5rem; }
-  .share-capture .ach-exp { margin-top: 0; padding: 0 4px; font-size: 0.5rem; }
-  .share-capture .ach-lock { top: 6px; right: 6px; font-size: 0.5rem; }
-}
+/* Shared profile image: shareProfile lays the copy out 600px wide (desktop layout on any screen) with
+   .share-capture, so it fills a 1080x1920 story. Season stats go in two columns to keep it short. */
+.share-capture .season-stats { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); column-gap: 28px; }
+.share-capture .season-stats h5 { grid-column: 1 / -1; }
 
 /* Guild Quest badges, under the roster */
 .guild-quests { margin-bottom: 8px; }
