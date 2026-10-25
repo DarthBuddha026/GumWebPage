@@ -1182,7 +1182,10 @@ a { color: inherit; }
 /* Each panel has a neon border with a matching glow (--glow). */
 .sched-panel { --glow: var(--line); padding: 20px; border: 2px solid var(--glow); border-radius: 14px; box-shadow: 0 0 6px var(--glow), 0 0 18px color-mix(in srgb, var(--glow) 75%, transparent), 0 0 42px color-mix(in srgb, var(--glow) 45%, transparent), inset 0 0 18px color-mix(in srgb, var(--glow) 30%, transparent); }
 .sched-cal { --glow: var(--teal-bright); grid-area: cal; }
-.sched-pod { --glow: var(--f-extreme); grid-area: pod; }
+/* The upcoming-event panel takes the colour of the event's kind, as on the calendar. */
+.sched-pod { --glow: var(--k-event); grid-area: pod; }
+.sched-pod.raid { --glow: var(--k-raid); }
+.sched-pod.siege { --glow: var(--k-siege); }
 .sched-pod .sched-when { margin-bottom: 0; }
 .sched-siege { grid-area: siege; align-self: stretch; display: flex; flex-direction: column; min-height: 0; --glow: var(--pink); }
 .cal-nav { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 12px; }
@@ -1198,7 +1201,7 @@ a { color: inherit; }
 .cal-label, .cal-holiday { max-width: 100%; overflow-wrap: anywhere; }
 .sched-cal .cal-label { font-size: 0.62rem; }
 .sched-kicker { margin: 0 0 4px; color: var(--ash); font-size: var(--t-xs); text-transform: uppercase; letter-spacing: 0.08em; }
-.sched-pod .sched-kicker { color: var(--f-extreme); }
+.sched-pod .sched-kicker { color: var(--glow); }
 .sched-siege .sched-kicker { color: var(--pink); }
 .sched-title { margin: 0; font-family: var(--font-title); font-weight: 600; font-size: var(--t-2xl); line-height: 1.1; }
 .sched-when { display: flex; flex-wrap: wrap; gap: 6px 16px; margin: 10px 0 14px; color: var(--ash); font-size: var(--t-s); }

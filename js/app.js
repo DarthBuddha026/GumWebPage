@@ -418,7 +418,7 @@
     // A selected Guild Siege shows in the siege panel instead.
     const showDetail = Boolean(w) && kind(w) !== "siege" && (w.date ? Boolean(shown) && w.date.startsWith(ym(...shown)) : true);
 
-    // The next Weekly Pod and Guild Siege from today, with a countdown.
+    // The next event (EXP Farm pod, Grand Raid or Guild Siege) and the next Guild Siege from today, with a countdown.
     const next = (test) => weeks.filter((x) => test(x) && x.date && x.date >= today && x.progress < 100).sort((p, q) => p.date.localeCompare(q.date))[0];
     const countdown = (date) => {
       const days = Math.round((new Date(`${date}T00:00:00`) - new Date(`${today}T00:00:00`)) / 864e5);
@@ -434,7 +434,7 @@
         ${holidayOn.has(x.date) ? `<span class="cal-holiday-note"><i class="fas fa-flag" aria-hidden="true"></i> ${esc(holidayOn.get(x.date).name)}</span>` : ""}
       </p>`;
     const none = (kicker, text) => `<p class="sched-kicker">${esc(kicker)}</p><p class="muted">${esc(text)}</p>`;
-    const pod = next((x) => /pod/i.test(x.label));
+    const upNext = next((x) => /pod/i.test(x.label) || kind(x) !== "event");
     // The siege panel shows the Guild Siege picked on the calendar, or else the next one.
     const nextSiege = next((x) => kind(x) === "siege");
     const siege = w && kind(w) === "siege" ? w : nextSiege;
@@ -461,8 +461,8 @@
           ${undated.length ? `<div class="cal-undated"><span class="muted">Date to be set:</span>${undated.map((i) => dayButton(i, `<span class="cal-label">${esc(weeks[i].label)}</span>`)).join("")}</div>` : ""}
           ${showDetail ? detailFor(w) : placeholder}
         </section>
-        <section class="sched-panel sched-pod" aria-label="Next EXP Farm Event">
-          ${pod ? upcoming(pod, "Upcoming EXP Farm Event") : none("Upcoming EXP Farm Event", "No EXP Farm Event coming up.")}
+        <section class="sched-panel sched-pod ${upNext ? kind(upNext) : ""}" aria-label="Next event">
+          ${upNext ? upcoming(upNext, "Upcoming Event") : none("Upcoming Event", "No events coming up.")}
         </section>
         <section class="sched-panel sched-siege" aria-label="Next Guild Siege">
           ${siege ? upcoming(siege, siege === nextSiege ? "Upcoming Guild Siege" : "Guild Siege") + siegeMatchups : none("Upcoming Guild Siege", "No Guild Siege coming up.")}
