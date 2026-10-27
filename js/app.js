@@ -434,7 +434,7 @@
     const kindName = (x) => (kind(x) === "siege" ? "Guild Siege" : kind(x) === "raid" ? "Grand Raid" : /pod/i.test(x.label) ? "EXP Farm Event" : "Event");
     const shownEvent = w || upNext;
     const eventPanel = (x) => `
-      ${x.poster ? `<a class="sched-poster" href="${esc(x.poster)}" target="_blank" rel="noopener" aria-label="Open the ${esc(x.label)} poster"><img src="${esc(x.poster)}" alt="${esc(x.label)} poster"></a>` : ""}
+      ${x.poster ? `<a class="sched-poster" href="${esc(x.poster)}" target="_blank" rel="noopener" data-title="${esc(x.label)}" aria-label="Open the ${esc(x.label)} poster"><img src="${esc(x.poster)}" alt="${esc(x.label)} poster"></a>` : ""}
       <div class="sched-event-info">
         ${upcoming(x, w ? kindName(x) : "Upcoming Event")}
         ${x.description ? `<p class="sched-desc">${esc(x.description)}</p>` : ""}
@@ -1714,6 +1714,18 @@
       if (month) {
         state.scheduleMonth += Number(month.dataset.scheduleMonth);
         return renderSchedule();
+      }
+
+      // An event poster opens full size in a modal (ctrl/cmd-click still opens it in a new tab).
+      const poster = e.target.closest(".sched-poster");
+      if (poster && !e.ctrlKey && !e.metaKey && !e.shiftKey) {
+        e.preventDefault();
+        $("#poster-image").src = poster.href;
+        $("#poster-image").alt = `${poster.dataset.title} poster`;
+        setText("poster-title", poster.dataset.title);
+        // The border takes the event's colour, as on the page.
+        $("#poster-modal").style.setProperty("--glow", getComputedStyle(poster).getPropertyValue("--glow"));
+        return openModal("poster-modal");
       }
 
       const day = e.target.closest("[data-schedule-day]");

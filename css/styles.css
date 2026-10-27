@@ -1094,6 +1094,10 @@ a { color: inherit; }
 
 .modal-card.wide { max-width: 760px; }
 .modal-card.auto { height: auto; max-height: 88vh; }
+/* Event poster: the card fits the picture, which keeps its shape inside the screen. */
+.modal-card.poster-card { width: auto; max-width: min(92vw, 960px); }
+.poster-card .modal-body { align-items: center; padding: 16px; }
+.poster-card img { display: block; max-width: 100%; max-height: calc(88vh - 110px); border: 2px solid var(--glow, var(--line-strong)); border-radius: 8px; }
 
 @keyframes modal-in { from { opacity: 0; transform: translateY(8px); } }
 
@@ -1189,7 +1193,7 @@ a { color: inherit; }
 .sched-pod .sched-when { margin-bottom: 0; }
 /* The poster sits above the details, keeping its shape; it opens full size. */
 .sched-poster { display: flex; justify-content: center; margin-bottom: 16px; }
-.sched-poster img { display: block; max-width: 100%; max-height: 360px; border-radius: 8px; }
+.sched-poster img { display: block; max-width: 100%; max-height: 360px; border: 2px solid var(--glow); border-radius: 8px; }
 .sched-fee { color: var(--glow); font-weight: 600; }
 .sched-desc { margin: 10px 0 0; font-size: var(--t-s); line-height: 1.5; white-space: pre-line; }
 /* Desktop: the calendar and the event panel keep one height whatever month or event is showing. The
