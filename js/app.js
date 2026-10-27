@@ -416,9 +416,10 @@
       const days = Math.round((new Date(`${date}T00:00:00`) - new Date(`${today}T00:00:00`)) / 864e5);
       return days === 0 ? "Today" : days === 1 ? "Tomorrow" : days === -1 ? "Yesterday" : days < 0 ? `${-days} days ago` : `In ${days} days`;
     };
-    const upcoming = (x, kicker) => `
+    // `aside` goes beside the title (the event panel's More info link).
+    const upcoming = (x, kicker, aside = "") => `
       <p class="sched-kicker">${esc(kicker)}</p>
-      <h3 class="sched-title">${esc(x.label)}</h3>
+      <div class="sched-title-row"><h3 class="sched-title">${esc(x.label)}</h3>${aside}</div>
       <p class="sched-when">
         ${x.date ? `<span class="sched-countdown">${esc(x.progress >= 100 ? "Complete" : countdown(x.date))}</span>` : ""}
         <span><i class="fa-regular fa-calendar" aria-hidden="true"></i> ${x.date ? esc(longDate(x.date)) : "Date to be set"}</span>
@@ -436,9 +437,8 @@
     const eventPanel = (x) => `
       ${x.poster ? `<a class="sched-poster" href="${esc(x.poster)}" target="_blank" rel="noopener" data-title="${esc(x.label)}" aria-label="Open the ${esc(x.label)} poster"><img src="${esc(x.poster)}" alt="${esc(x.label)} poster"></a>` : ""}
       <div class="sched-event-info">
-        ${upcoming(x, w ? kindName(x) : "Upcoming Event")}
+        ${upcoming(x, w ? kindName(x) : "Upcoming Event", x.link ? `<a class="sched-link" href="${esc(x.link)}" target="_blank" rel="noopener">More info <i class="fas fa-arrow-up-right-from-square" aria-hidden="true"></i></a>` : "")}
         ${x.description ? `<p class="sched-desc">${esc(x.description)}</p>` : ""}
-        ${x.link ? `<a class="sched-link" href="${esc(x.link)}" target="_blank" rel="noopener">More info <i class="fas fa-arrow-up-right-from-square" aria-hidden="true"></i></a>` : ""}
       </div>`;
     // The siege panel shows the Guild Siege picked on the calendar, or else the next one.
     const nextSiege = next((x) => kind(x) === "siege");

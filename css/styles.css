@@ -1204,7 +1204,9 @@ a { color: inherit; }
   .sched-poster { flex: none; }
   .sched-event-info { flex: 1; min-height: 0; overflow-y: auto; }
 }
-.sched-link { display: inline-flex; align-items: center; gap: 6px; margin-top: 8px; color: var(--glow); font-size: var(--t-s); font-weight: 600; text-decoration: none; }
+/* The title with the More info link beside it (the link wraps under a long title). */
+.sched-title-row { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 14px; }
+.sched-link { display: inline-flex; align-items: center; gap: 6px; color: var(--glow); font-size: var(--t-s); font-weight: 600; text-decoration: none; white-space: nowrap; }
 .sched-link:hover { text-decoration: underline; }
 .sched-siege { grid-area: siege; --glow: var(--pink); }
 .cal-nav { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 12px; }
