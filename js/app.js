@@ -167,6 +167,7 @@
         league.guilds = (league.guilds || []).map((g) => ({ ...g, logo: fromAdmin(g.logo) }));
         league.players = (league.players || []).map((p) => ({ ...p, photo: fromAdmin(p.photo) }));
         league.season = { weeks: [], matches: [], ...league.season };
+        league.season.weeks = league.season.weeks.map((w) => ({ ...w, poster: fromAdmin(w.poster) }));
         league.results = league.results || {};
         return league;
       } catch (err) {
@@ -202,7 +203,11 @@
         const inWeek = matches.filter((m) => m.week === w.label);
         const done = inWeek.filter((m) => m.bouts.length || m.defaultWinner).length;
         // Weeks without fixtures (openings, raids) are complete once the admin marks them done.
-        return { id: w.id, label: w.label, date: w.date, location: w.location || "", progress: inWeek.length ? Math.round((done / inWeek.length) * 100) : w.done ? 100 : 0 };
+        return {
+          id: w.id, label: w.label, date: w.date, location: w.location || "",
+          // Event details from the admin's week editor, shown in the Schedules page's Upcoming Event panel.
+          poster: w.poster || "", time: w.time || "", fee: w.fee || "", link: w.link || "", description: w.description || "",
+          progress: inWeek.length ? Math.round((done / inWeek.length) * 100) : w.done ? 100 : 0 };
       });
 
     return {
@@ -342,8 +347,8 @@
     });
   }
 
-  // The schedule page: a one-month calendar (match days marked by kind; the selected day's details show
-  // under it), the next Weekly Pod, and the next Guild Siege with its match-ups. Undated days sit under the calendar.
+  // The schedule page: a one-month calendar (match days marked by kind; undated days sit under it), the event
+  // panel (the day picked on the calendar, or else the next event), and the next (or picked) Guild Siege with its match-ups.
   function renderSchedule() {
     const weeks = state.raw.weeks || [];
     if (!weeks.length) {
@@ -365,17 +370,6 @@
     };
 
     const w = weeks[state.scheduleDay];
-    const status = (x) => (x.progress >= 100 ? "Complete" : x.progress > 0 ? `${x.progress}% played` : "Upcoming");
-    const detailFor = (x) => `
-      <section class="cal-detail ${kind(x)}" aria-live="polite">
-        <h4>${esc(x.label)}</h4>
-        ${holidayOn.has(x.date) ? `<p class="cal-holiday-note"><i class="fas fa-flag" aria-hidden="true"></i> ${esc(holidayOn.get(x.date).name)}, ${holidayOn.get(x.date).type === "regular" ? "a regular holiday" : "a special non-working day"}</p>` : ""}
-        <p class="cal-meta"><span>${x.date ? esc(longDate(x.date)) : "Date to be set"}</span>${x.location ? `<span><i class="fas fa-location-dot" aria-hidden="true"></i> ${esc(x.location)}</span>` : ""}<span>${esc(status(x))}</span></p>
-      </section>`;
-    const placeholder = `
-      <section class="cal-detail placeholder" aria-live="polite">
-        <p class="muted"><i class="fa-regular fa-hand-pointer" aria-hidden="true"></i> Pick a match day on the calendar to see its details here. Guild Sieges open in the siege panel.</p>
-      </section>`;
     const dated = weeks.filter((w) => w.date).map((w) => w.date).sort();
     const months = [];
     if (dated.length) {
@@ -414,11 +408,9 @@
     const shown = months[state.scheduleMonth];
     const monthTitle = shown ? new Date(shown[0], shown[1] - 1, 1).toLocaleDateString(undefined, { month: "long", year: "numeric" }) : "No dates yet";
     const undated = weeks.map((x, i) => i).filter((i) => !weeks[i].date);
-    // The selected day's details show under the calendar when it's in the month on screen (or undated).
-    // A selected Guild Siege shows in the siege panel instead.
-    const showDetail = Boolean(w) && kind(w) !== "siege" && (w.date ? Boolean(shown) && w.date.startsWith(ym(...shown)) : true);
 
     // The next event (EXP Farm pod, Grand Raid or Guild Siege) and the next Guild Siege from today, with a countdown.
+    const clock = (t) => new Date(`2000-01-01T${t}:00`).toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" });
     const next = (test) => weeks.filter((x) => test(x) && x.date && x.date >= today && x.progress < 100).sort((p, q) => p.date.localeCompare(q.date))[0];
     const countdown = (date) => {
       const days = Math.round((new Date(`${date}T00:00:00`) - new Date(`${today}T00:00:00`)) / 864e5);
@@ -430,11 +422,24 @@
       <p class="sched-when">
         ${x.date ? `<span class="sched-countdown">${esc(x.progress >= 100 ? "Complete" : countdown(x.date))}</span>` : ""}
         <span><i class="fa-regular fa-calendar" aria-hidden="true"></i> ${x.date ? esc(longDate(x.date)) : "Date to be set"}</span>
+        ${x.time ? `<span><i class="fa-regular fa-clock" aria-hidden="true"></i> ${esc(clock(x.time))}</span>` : ""}
         ${x.location ? `<span><i class="fas fa-location-dot" aria-hidden="true"></i> ${esc(x.location)}</span>` : ""}
+        ${x.fee ? `<span class="sched-fee"><i class="fas fa-ticket" aria-hidden="true"></i> ${esc(x.fee)}</span>` : ""}
         ${holidayOn.has(x.date) ? `<span class="cal-holiday-note"><i class="fas fa-flag" aria-hidden="true"></i> ${esc(holidayOn.get(x.date).name)}</span>` : ""}
       </p>`;
     const none = (kicker, text) => `<p class="sched-kicker">${esc(kicker)}</p><p class="muted">${esc(text)}</p>`;
     const upNext = next((x) => /pod/i.test(x.label) || kind(x) !== "event");
+    // The event panel: the day picked on the calendar, or else the next event, with its poster (opens full size)
+    // and the details uploaded in the admin.
+    const kindName = (x) => (kind(x) === "siege" ? "Guild Siege" : kind(x) === "raid" ? "Grand Raid" : /pod/i.test(x.label) ? "EXP Farm Event" : "Event");
+    const shownEvent = w || upNext;
+    const eventPanel = (x) => `
+      ${x.poster ? `<a class="sched-poster" href="${esc(x.poster)}" target="_blank" rel="noopener" aria-label="Open the ${esc(x.label)} poster"><img src="${esc(x.poster)}" alt="${esc(x.label)} poster"></a>` : ""}
+      <div class="sched-event-info">
+        ${upcoming(x, w ? kindName(x) : "Upcoming Event")}
+        ${x.description ? `<p class="sched-desc">${esc(x.description)}</p>` : ""}
+        ${x.link ? `<a class="sched-link" href="${esc(x.link)}" target="_blank" rel="noopener">More info <i class="fas fa-arrow-up-right-from-square" aria-hidden="true"></i></a>` : ""}
+      </div>`;
     // The siege panel shows the Guild Siege picked on the calendar, or else the next one.
     const nextSiege = next((x) => kind(x) === "siege");
     const siege = w && kind(w) === "siege" ? w : nextSiege;
@@ -459,10 +464,9 @@
           </ul>
           ${shown ? monthGrid(shown) : ""}
           ${undated.length ? `<div class="cal-undated"><span class="muted">Date to be set:</span>${undated.map((i) => dayButton(i, `<span class="cal-label">${esc(weeks[i].label)}</span>`)).join("")}</div>` : ""}
-          ${showDetail ? detailFor(w) : placeholder}
         </section>
-        <section class="sched-panel sched-pod ${upNext ? kind(upNext) : ""}" aria-label="Next event">
-          ${upNext ? upcoming(upNext, "Upcoming Event") : none("Upcoming Event", "No events coming up.")}
+        <section class="sched-panel sched-pod ${shownEvent ? kind(shownEvent) : ""}" aria-label="${w ? "Selected event" : "Next event"}" aria-live="polite">
+          ${shownEvent ? eventPanel(shownEvent) : none("Upcoming Event", "No events coming up.")}
         </section>
         <section class="sched-panel sched-siege" aria-label="Next Guild Siege">
           ${siege ? upcoming(siege, siege === nextSiege ? "Upcoming Guild Siege" : "Guild Siege") + siegeMatchups : none("Upcoming Guild Siege", "No Guild Siege coming up.")}
@@ -967,8 +971,6 @@
     closeMobileMenu();
     $("#dashboard").classList.toggle("hidden", page !== "dashboard");
     $("#schedule-page").classList.toggle("hidden", page !== "schedule");
-    // On desktop the schedule page fits the screen (see body.on-schedule in the CSS).
-    document.body.classList.toggle("on-schedule", page === "schedule");
     window.scrollTo({ top: 0, behavior: "instant" });
     // The map can't measure itself while hidden, so redraw it once the dashboard is back.
     if (page === "dashboard" && state.map) renderMap();
@@ -1716,10 +1718,12 @@
 
       const day = e.target.closest("[data-schedule-day]");
       if (day) {
-        state.scheduleDay = Number(day.dataset.scheduleDay);
+        // Clicking the picked day again goes back to the upcoming event.
+        const i = Number(day.dataset.scheduleDay);
+        state.scheduleDay = i === state.scheduleDay ? null : i;
         renderSchedule();
-        // Bring the details into view: under the calendar, or the siege panel for a Guild Siege.
-        return ($(".cal-detail") || $(".sched-siege")).scrollIntoView({ behavior: "smooth", block: "nearest" });
+        // On phones the event panel is under the calendar, so bring it into view.
+        return $(".sched-pod").scrollIntoView({ behavior: "smooth", block: "nearest" });
       }
 
       const toggle = e.target.closest("[data-toggle-group]");
