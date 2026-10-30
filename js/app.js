@@ -409,7 +409,7 @@
     const monthTitle = shown ? new Date(shown[0], shown[1] - 1, 1).toLocaleDateString(undefined, { month: "long", year: "numeric" }) : "No dates yet";
     const undated = weeks.map((x, i) => i).filter((i) => !weeks[i].date);
 
-    // The next event (EXP Farm pod, Grand Raid or Guild Siege) and the next Guild Siege from today, with a countdown.
+    // The next event (EXP Farm, Grand Raid or Guild Siege) and the next Guild Siege from today, with a countdown.
     const clock = (t) => new Date(`2000-01-01T${t}:00`).toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" });
     const next = (test) => weeks.filter((x) => test(x) && x.date && x.date >= today && x.progress < 100).sort((p, q) => p.date.localeCompare(q.date))[0];
     const countdown = (date) => {
@@ -429,10 +429,10 @@
         ${holidayOn.has(x.date) ? `<span class="cal-holiday-note"><i class="fas fa-flag" aria-hidden="true"></i> ${esc(holidayOn.get(x.date).name)}</span>` : ""}
       </p>`;
     const none = (kicker, text) => `<p class="sched-kicker">${esc(kicker)}</p><p class="muted">${esc(text)}</p>`;
-    const upNext = next((x) => /pod/i.test(x.label) || kind(x) !== "event");
+    const upNext = next(() => true);
     // The event panel: the day picked on the calendar, or else the next event, with its poster (opens full size)
     // and the details uploaded in the admin.
-    const kindName = (x) => (kind(x) === "siege" ? "Guild Siege" : kind(x) === "raid" ? "Grand Raid" : /pod/i.test(x.label) ? "EXP Farm Event" : "Event");
+    const kindName = (x) => (kind(x) === "siege" ? "Guild Siege" : kind(x) === "raid" ? "Grand Raid" : "EXP Farm Event");
     const shownEvent = w || upNext;
     const eventPanel = (x) => `
       ${x.poster ? `<a class="sched-poster" href="${esc(x.poster)}" target="_blank" rel="noopener" data-title="${esc(x.label)}" aria-label="Open the ${esc(x.label)} poster"><img src="${esc(x.poster)}" alt="${esc(x.label)} poster"></a>` : ""}
