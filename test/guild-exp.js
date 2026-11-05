@@ -39,6 +39,11 @@ assert.strictEqual(entryExp({ entries: 1, champion: true, role: "leader" }, "rai
 const big = { entries: 2, swiss: true, champion: true, role: "leader", defeated: [{ role: "battle-master" }, { role: "leader" }] };
 assert.strictEqual(entryExp(big, "pod", cfg), 49);
 assert.strictEqual(entryExp(big, "raid", cfg), 98);
+// Bounty Guild: +10 per member, stacking with the Leader's +10 and the Battle Master's +5; a member pays nothing without it.
+assert.strictEqual(entryExp({ entries: 1, defeated: [{ role: "member", bounty: true }] }, "pod", cfg), 12);
+assert.strictEqual(entryExp({ entries: 1, defeated: [{ role: "battle-master", bounty: true }] }, "pod", cfg), 17);
+assert.strictEqual(entryExp({ entries: 1, defeated: [{ role: "leader", bounty: true }] }, "pod", cfg), 22);
+assert.strictEqual(entryExp({ entries: 1, defeated: [{ role: "member" }] }, "pod", cfg), 2);
 
 // ----- Shop support tiers -----
 assert.strictEqual(purchaseExp(499, cfg), 0);
