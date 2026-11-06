@@ -907,6 +907,7 @@ a { color: inherit; }
 .rank-row .guild-name { font-weight: 600; font-size: var(--t-l); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .rank-row .guild-meta { color: var(--ash); font-size: var(--t-xs); display: flex; flex-wrap: wrap; gap: 0 10px; }
 .rank-row .guild-meta span { white-space: nowrap; }
+.rank-row .guild-progress span:not(:last-child)::after { content: "|"; margin-left: 10px; }
 .rank-row .record { font-variant-numeric: tabular-nums; color: var(--ash); font-size: var(--t-s); }
 .rank-row .record b { color: var(--bone); font-size: var(--t-l); }
 .rank-row .wr { text-align: right; font-weight: 700; font-variant-numeric: tabular-nums; }
@@ -1340,6 +1341,8 @@ a { color: inherit; }
 .blader-score { text-align: right; }
 .blader-score b { display: block; font-size: var(--t-xl); line-height: 1; font-variant-numeric: tabular-nums; }
 .blader-score span { color: var(--ash); font-size: var(--t-xs); }
+.guild-xp b { color: var(--xp-dark, var(--pink)); }
+[data-theme="light"] .guild-xp b { color: var(--xp-light, var(--pink)); }
 
 /* Profile */
 
@@ -1396,6 +1399,7 @@ a { color: inherit; }
 }
 
 .profile .stat-strip { --cols: 3; margin: 20px 0 0; }
+.profile .stat-strip.has-xp { --cols: 4; }
 .profile .stat-strip b { font-size: var(--t-3xl); line-height: 1; }
 .profile .stat-strip .first b { color: var(--pink); }
 
@@ -1766,6 +1770,8 @@ a.bracket-launch:hover { border-color: var(--pink); background: var(--surface-ra
   .rank-row { grid-template-columns: 36px 36px minmax(0, 1fr) 56px; gap: 6px 10px; }
   .rank-row .avatar { width: 36px; height: 36px; }
   .rank-row .record { display: none; }
+  .rank-row .guild-progress span::after { display: none; } /* stacked here, so no separators */
+  .blader-name { white-space: normal; } /* the two scores leave little room, so wrap rather than cut the IGN */
   .rank-row .wr-meter { grid-column: 3 / -1; grid-row: 2; }
   .rank-row .pos { font-size: var(--t-l); }
 
@@ -1786,7 +1792,7 @@ a.bracket-launch:hover { border-color: var(--pink); background: var(--surface-ra
   .modal-overlay { padding: 0; }
   .modal-card, .modal-card.wide, .modal-card.auto { max-width: 100%; height: 100%; max-height: 100%; border-radius: 0; border: none; }
 
-  .roster .stat-strip { --cols: 2; }
+  .roster .stat-strip, .profile .stat-strip.has-xp { --cols: 2; }
   .log-hero .stat-strip { --cols: 3; }
   .bracket-grid { grid-template-columns: minmax(0, 1fr); }
   .finish-row { grid-template-columns: 76px minmax(0, 1fr) auto; }

@@ -64,6 +64,9 @@ const all = guildExp(["A", "B"], [], exp, teams);
 assert.deepStrictEqual(all.get("A").guild, { events: 12 + 24, achievements: 10 + 10 + 5, shop: 4 });
 assert.strictEqual(all.get("A").exp, 65);
 assert.deepStrictEqual(all.get("B").guild, { events: 2, achievements: 0, shop: 2 });
+// Each blader's share: events and achievements, not the guild's shop receipts.
+assert.deepStrictEqual(all.get("A").members, { pa: 12 + 10, pc: 24 + 10 + 5 });
+assert.deepStrictEqual(all.get("B").members, { pb: 2 });
 
 // Every blader can earn at most the 70 Achievement EXP the handbook allows.
 assert.strictEqual(cfg.playerAchievements.reduce((n, a) => n + a.exp, 0), 70);

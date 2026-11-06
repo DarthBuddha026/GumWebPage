@@ -160,15 +160,17 @@ window.LEAGUE_CONFIG = {
   // skillExpMax; a skill is unlocked while Skill EXP is at or above its threshold.
   // sieges: [{ winner, loser, attacker, target }] in the order they were played; the attacker is the fixture's
   // first guild. playerTeam: Map of blader key -> guild name (EXP goes to the blader's current guild).
+  // `members` is each blader's share of the guild's EXP (blader key -> EXP); shop receipts belong to the guild alone.
   function guildExp(guildNames, sieges, exp, playerTeam, cfg = window.LEAGUE_CONFIG) {
     const S = cfg.siegeSkillExp;
     const skills = (exp.skills || []).slice().sort((a, b) => a.exp - b.exp);
-    const out = new Map(guildNames.map((g) => [g, { exp: 0, skillExp: 0, unlocked: 0, guild: { events: 0, achievements: 0, shop: 0 }, siege: 0 }]));
-    const gain = (guild, part, n) => {
+    const out = new Map(guildNames.map((g) => [g, { exp: 0, skillExp: 0, unlocked: 0, guild: { events: 0, achievements: 0, shop: 0 }, siege: 0, members: {} }]));
+    const gain = (guild, part, n, player) => {
       const g = out.get(guild);
       if (!g || !n) return;
       g.exp += n;
       g.guild[part] += n;
+      if (player) g.members[player] = (g.members[player] || 0) + n;
     };
 
     sieges.forEach((m) => {
@@ -184,12 +186,12 @@ window.LEAGUE_CONFIG = {
       });
     });
 
-    (exp.events || []).forEach((ev) => ev.entries.forEach((en) => gain(playerTeam.get(en.player), "events", entryExp(en, ev.type, cfg))));
+    (exp.events || []).forEach((ev) => ev.entries.forEach((en) => gain(playerTeam.get(en.player), "events", entryExp(en, ev.type, cfg), en.player)));
 
     const achById = new Map((cfg.playerAchievements || []).map((a) => [a.id, a]));
     Object.entries(exp.playerAchievements || {}).forEach(([id, keys]) => {
       const a = achById.get(id);
-      if (a) keys.forEach((k) => gain(playerTeam.get(k), "achievements", a.exp));
+      if (a) keys.forEach((k) => gain(playerTeam.get(k), "achievements", a.exp, k));
     });
 
     (exp.purchases || []).forEach((p) => gain(p.guild, "shop", purchaseExp(p.amount, cfg)));

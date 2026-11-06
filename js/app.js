@@ -75,11 +75,38 @@
   // Guild colours from the data: `colors: [fill, border]` (border defaults to the fill).
   const HEX = /^#([0-9a-f]{3}|[0-9a-f]{6})$/i;
 
-  function inkFor(hex) {
+  function rgbOf(hex) {
     const h = hex.length === 4 ? hex.replace(/^#(.)(.)(.)$/, "#$1$1$2$2$3$3") : hex;
-    const [r, g, b] = [1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16) / 255);
+    return [1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16));
+  }
+
+  function inkFor(hex) {
+    const [r, g, b] = rgbOf(hex).map((v) => v / 255);
     const lum = 0.2126 * r + 0.7152 * g + 0.0722 * b;
     return lum > 0.55 ? "#000" : "#fff";
+  }
+
+  const relLum = (rgb) => {
+    const [r, g, b] = rgb.map((v) => (v /= 255) <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4);
+    return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+  };
+
+  // A guild colour used as large text: unchanged if it reads at 3:1 on the theme's page colour, otherwise moved
+  // toward white (dark theme) or black (light theme) only as far as it takes (Hunters' black can't show on black).
+  function readableOn(hex, light) {
+    const rgb = rgbOf(hex);
+    const page = relLum(light ? [245, 247, 247] : [0, 0, 0]);
+    for (let step = 0; step <= 20; step++) {
+      const c = rgb.map((v) => Math.round(v + ((light ? 0 : 255) - v) * (step / 20)));
+      const lum = relLum(c);
+      if ((Math.max(lum, page) + 0.05) / (Math.min(lum, page) + 0.05) >= 3) return `rgb(${c})`;
+    }
+  }
+
+  // Both themes' colours for a guild's EXP number; the stylesheet picks one, so a theme switch needs no re-render.
+  function guildXpStyle(teamName) {
+    const [fill] = (state.teamsByName.get(teamName)?.colors || []).filter((c) => HEX.test(c));
+    return fill ? `style="--xp-dark:${readableOn(fill, false)};--xp-light:${readableOn(fill, true)}"` : "";
   }
 
   function guildStyle(teamName, prefix) {
@@ -254,6 +281,7 @@
       .map(({ m }) => ({ winner: m.result.winner, loser: m.result.winner === m.team1 ? m.team2 : m.team1, attacker: m.team1, target: m.target }));
     const exp = window.leagueTools.guildExp(teams.map((t) => t.name), sieges, raw.exp || {}, new Map(players.map((p) => [p.key, p.team])));
     teams.forEach((t) => (t.xp = exp.get(t.name)));
+    players.forEach((p) => (p.xp = exp.get(p.team)?.members[p.key] || 0));
     // GGW2 player achievements each blader has unlocked (shown as cards on their profile, apart from the exclusive badges).
     players.forEach((p) => (p.unlocked = new Set()));
     (CFG.playerAchievements || []).forEach((a) => (raw.exp?.playerAchievements?.[a.id] || []).forEach((k) => playersByKey.get(k)?.unlocked.add(a.id)));
@@ -754,6 +782,17 @@
     return `<div class="wr-meter" data-tip="Win rate <b>${pct(wr, 1)}</b><br><span class='muted'>Center line is 50%</span>"><span style="left:${left}%;width:${width}%;background:${color}"></span></div>`;
   }
 
+  // A guild's progress in words on its ranking row. Each part shows once the admin sets it up, like guildExpBlock().
+  function guildProgress(t) {
+    const quests = CFG.guildQuests || [];
+    const parts = [
+      state.expCap && `Guild EXP: ${t.xp.exp}/${state.expCap}`,
+      state.expSkills.length && `Skill EXP: ${t.xp.skillExp}/${CFG.skillExpMax}`,
+      quests.length && `Guild Quest: ${questsDone(t)}/${quests.length}`,
+    ].filter(Boolean);
+    return parts.length ? `<div class="guild-meta guild-progress">${parts.map((p) => `<span>${esc(p)}</span>`).join("")}</div>` : "";
+  }
+
   function renderRanking() {
     const top = state.teams.slice(0, 10);
     $("#team-leaderboard").innerHTML = top.length
@@ -766,6 +805,7 @@
             <div class="guild">
               <div class="guild-name">${esc(t.name)}</div>
               <div class="guild-meta">${SINGLE_BRACKET ? "" : `<span>Bracket ${esc(t.bracket)}</span>`}<span>${t.points} points</span></div>
+              ${guildProgress(t)}
             </div>
             <span class="record"><b>${record(t.wins, t.losses)}</b></span>
             ${wrMeter(t.winRate)}
@@ -1119,6 +1159,7 @@
           <div class="blader-name">${esc(p.name)}${p.ign ? ` | ${esc(p.ign)}` : ""}</div>
           <div class="blader-tags">${roleTag(p)}${rankTag(p)}${bracketBadge(p.bracket)}${showGuild ? `<span class="tag">${esc(p.team)}</span>` : ""}</div>
         </div>
+        ${state.expCap ? `<div class="blader-score guild-xp" ${guildXpStyle(p.team)}><b>${p.xp.toLocaleString()}</b><span>Guild EXP</span></div>` : ""}
         <div class="blader-score"><b>${fmt2(p.mvp)}</b><span>MVP score</span></div>
       </div>`;
   }
@@ -1150,12 +1191,13 @@
     animateMeters($("#roster-view"));
   }
 
+  const questsDone = (t) => (CFG.guildQuests || []).filter((q) => (state.raw.exp?.quests?.[q.id] || []).includes(t.name)).length;
+
   // Guild Quest badges (CFG.guildQuests), unlocked once the admin marks the quest complete for this guild.
   function guildQuestBlock(t) {
     const quests = CFG.guildQuests || [];
     if (!quests.length) return "";
     const done = state.raw.exp?.quests || {};
-    const unlocked = quests.filter((q) => (done[q.id] || []).includes(t.name)).length;
     const badges = quests
       .map((q) => {
         const on = (done[q.id] || []).includes(t.name);
@@ -1169,7 +1211,7 @@
       .join("");
     return `
       <div class="stat-block guild-quests">
-        <h5>Guild Quest Badges <span class="exp-total">${unlocked} <small>/ ${quests.length}</small></span></h5>
+        <h5>Guild Quest Badges <span class="exp-total">${questsDone(t)} <small>/ ${quests.length}</small></span></h5>
         <ul class="quests">${badges}</ul>
       </div>`;
   }
@@ -1285,12 +1327,13 @@
           </div>
         </div>
 
-        <div class="stat-strip">
+        <div class="stat-strip ${state.expCap ? "has-xp" : ""}">
           <div class="${p.leagueRank === 1 ? "first" : ""}"><b>${p.eligible ? `#${p.leagueRank}` : "–"}</b><span>League rank</span></div>
           ${SINGLE_BRACKET
             ? `<div><b>${o.games}</b><span>Games played</span></div>`
             : `<div class="${p.bracketRank === 1 ? "first" : ""}"><b>${p.eligible ? `#${p.bracketRank}` : "–"}</b><span>In bracket ${esc(p.bracket)}</span></div>`}
           <div><b>${pct(o.winRate)}</b><span>Win rate, ${record(o.wins, o.losses)}</span></div>
+          ${state.expCap ? `<div class="guild-xp" ${guildXpStyle(p.team)}><b>${p.xp.toLocaleString()}</b><span>Guild EXP</span></div>` : ""}
         </div>
         ${p.eligible ? "" : `<p class="section-note">Not ranked yet. Bladers need ${CFG.minGames || 1} games and at least half of their guild's matches.</p>`}
 
