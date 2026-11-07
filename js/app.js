@@ -91,7 +91,7 @@
     return 0.2126 * r + 0.7152 * g + 0.0722 * b;
   };
 
-  // A guild colour used as large text: unchanged if it reads at 3:1 on the theme's page colour, otherwise moved
+  // A guild colour used as text: unchanged if it reads at 4.5:1 on the theme's page colour, otherwise moved
   // toward white (dark theme) or black (light theme) only as far as it takes (Hunters' black can't show on black).
   function readableOn(hex, light) {
     const rgb = rgbOf(hex);
@@ -99,14 +99,17 @@
     for (let step = 0; step <= 20; step++) {
       const c = rgb.map((v) => Math.round(v + ((light ? 0 : 255) - v) * (step / 20)));
       const lum = relLum(c);
-      if ((Math.max(lum, page) + 0.05) / (Math.min(lum, page) + 0.05) >= 3) return `rgb(${c})`;
+      if ((Math.max(lum, page) + 0.05) / (Math.min(lum, page) + 0.05) >= 4.5) return `rgb(${c})`;
     }
   }
 
-  // Both themes' colours for a guild's EXP number; the stylesheet picks one, so a theme switch needs no re-render.
+  // Both themes' colours for a guild's EXP number (the stylesheet picks one, so a theme switch needs no re-render),
+  // in its main colour, or its secondary one when the main is a plain grey/white/black (Spartans' white → gold).
   function guildXpStyle(teamName) {
-    const [fill] = (state.teamsByName.get(teamName)?.colors || []).filter((c) => HEX.test(c));
-    return fill ? `style="--xp-dark:${readableOn(fill, false)};--xp-light:${readableOn(fill, true)}"` : "";
+    const [main, second] = (state.teamsByName.get(teamName)?.colors || []).filter((c) => HEX.test(c));
+    const grey = (hex) => new Set(rgbOf(hex)).size === 1;
+    const c = main && grey(main) && second ? second : main;
+    return c ? `style="--xp-dark:${readableOn(c, false)};--xp-light:${readableOn(c, true)}"` : "";
   }
 
   function guildStyle(teamName, prefix) {
