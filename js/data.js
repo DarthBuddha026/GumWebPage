@@ -97,18 +97,19 @@ window.LEAGUE_CONFIG = {
   ],
   // Player achievements (section 2.6). Each registered blader can earn each one once; the EXP goes to their guild.
   // Organizers tick them in the admin's Guild EXP tab, keyed by `id`, so keep ids stable when editing the text.
+  // One with `auto` isn't ticked: it comes from the recorded Weekly Pods, Grand Raids and siege scores (see earnedAchievements).
   // `icon` is the Font Awesome icon on the blader profile achievement badge.
   playerAchievements: [
-    { id: "pa1", name: "War Machine", exp: 10, icon: "fa-hammer", text: "Be deployed in three consecutive successful Guild attack legs during Guild Sieges." },
-    { id: "pa2", name: "Fortress", exp: 10, icon: "fa-chess-rook", text: "Be deployed in three consecutive successful Guild defense legs during Guild Sieges." },
-    { id: "pa3", name: "Full Deployment", exp: 5, icon: "fa-people-group", text: "Be part of a Guild whose entire official roster participates in all four Grand Raids." },
-    { id: "pa4", name: "Perfect War", exp: 10, icon: "fa-crown", text: "Be deployed in a Guild Siege attack or defense leg won without losing an individual matchup." },
-    { id: "pa5", name: "We Feast Tonight!", exp: 5, icon: "fa-drumstick-bite", text: "Be deployed in and complete the Guild's first official Guild Siege encounter." },
+    { id: "pa1", name: "War Machine", exp: 10, icon: "fa-hammer", auto: "attack-streak", text: "Be deployed in three consecutive successful Guild attack legs during Guild Sieges." },
+    { id: "pa2", name: "Fortress", exp: 10, icon: "fa-chess-rook", auto: "defense-streak", text: "Be deployed in three consecutive successful Guild defense legs during Guild Sieges." },
+    { id: "pa3", name: "Full Deployment", exp: 5, icon: "fa-people-group", auto: "full-deployment", text: "Be part of a Guild whose entire official roster participates in all four Grand Raids." },
+    { id: "pa4", name: "Perfect War", exp: 10, icon: "fa-crown", auto: "perfect-leg", text: "Be deployed in a Guild Siege attack or defense leg won without losing an individual matchup." },
+    { id: "pa5", name: "We Feast Tonight!", exp: 5, icon: "fa-drumstick-bite", auto: "first-encounter", text: "Be deployed in and complete the Guild's first official Guild Siege encounter." },
     { id: "pa6", name: "Extreme Specialist", exp: 10, icon: "fa-bolt", text: "Score at least two Xtreme Finishes in one individual matchup during a Grand Raid." },
-    { id: "pa7", name: "Swiss King", exp: 5, icon: "fa-chess-king", text: "Become Swiss King or Queen at an EXP-accredited Weekly Pod or Grand Raid." },
-    { id: "pa8", name: "The Strongest", exp: 5, icon: "fa-trophy", text: "Become Champion at an EXP-accredited Weekly Pod or Grand Raid." },
-    { id: "pa9", name: "King Slayer", exp: 5, icon: "fa-skull", text: "Defeat an opposing Guild's registered Guild Leader for the first time during the Top Cut of a Weekly Pod or Grand Raid." },
-    { id: "pa10", name: "General Executioner", exp: 5, icon: "fa-skull-crossbones", text: "Defeat an opposing Guild's registered Battle Master for the first time during the Top Cut of a Weekly Pod or Grand Raid." },
+    { id: "pa7", name: "Swiss King", exp: 5, icon: "fa-chess-king", auto: "swiss", text: "Become Swiss King or Queen at an EXP-accredited Weekly Pod or Grand Raid." },
+    { id: "pa8", name: "The Strongest", exp: 5, icon: "fa-trophy", auto: "champion", text: "Become Champion at an EXP-accredited Weekly Pod or Grand Raid." },
+    { id: "pa9", name: "King Slayer", exp: 5, icon: "fa-skull", auto: "leader", text: "Defeat an opposing Guild's registered Guild Leader for the first time during the Top Cut of a Weekly Pod or Grand Raid." },
+    { id: "pa10", name: "General Executioner", exp: 5, icon: "fa-skull-crossbones", auto: "battle-master", text: "Defeat an opposing Guild's registered Battle Master for the first time during the Top Cut of a Weekly Pod or Grand Raid." },
   ],
 
   // ----- Guild Skill EXP (section III, mastery results) -----
@@ -153,15 +154,96 @@ window.LEAGUE_CONFIG = {
   // Guild EXP for one shop receipt: the highest tier its amount reaches.
   const purchaseExp = (amount, cfg) => cfg.shopExp.find((t) => amount >= t.min)?.exp || 0;
 
+  // Who has each player achievement (achievement id -> blader keys). An `auto` one is worked out from the events (using
+  // the roles recorded with each defeat) or the siege scores, so correcting either corrects it too; the rest are ticks.
+  // legs: every Guild Siege fixture in play order, played or not: { week, round, attacker, defender, winner, bouts }.
+  // `winner` is null until a leg is scored, and a leg won by default has no bouts, so nobody was deployed in it.
+  const fromEvents = (test) => (exp) => new Set((exp.events || []).flatMap((ev) => ev.entries.filter(test).map((en) => en.player)));
+  const deployed = (leg, side) => (leg.bouts || []).map((b) => (side === "attacker" ? b.p1 : b.p2)).filter(Boolean);
+
+  // Won three legs in a row on this side, counting only the legs the blader was deployed in: losing one restarts their
+  // run, sitting one out doesn't. A guild leg not scored yet restarts everyone's, since it could still be a loss.
+  const streak = (side) => (exp, legs) => {
+    const runs = new Map(); // guild -> blader -> legs in a row
+    const earned = new Set();
+    legs.forEach((leg) => {
+      const guild = leg[side];
+      if (!runs.has(guild)) runs.set(guild, new Map());
+      const run = runs.get(guild);
+      if (!leg.winner) return run.clear();
+      new Set(deployed(leg, side)).forEach((k) => {
+        const n = leg.winner === guild ? (run.get(k) || 0) + 1 : 0;
+        run.set(k, n);
+        if (n >= 3) earned.add(k);
+      });
+    });
+    return earned;
+  };
+
+  // Every active blader on the guild's current roster entered all four Grand Raids. Each raid is one recorded event.
+  const fullDeployment = (exp, legs, players) => {
+    const raids = (exp.events || []).filter((ev) => ev.type === "raid").map((ev) => new Set(ev.entries.map((en) => en.player)));
+    const active = players.filter((p) => p.active);
+    if (raids.length < 4) return new Set();
+    const missing = new Set(active.filter((p) => !raids.every((r) => r.has(p.key))).map((p) => p.team));
+    return new Set(active.filter((p) => !missing.has(p.team)).map((p) => p.key));
+  };
+
+  // Deployed on the winning side of a leg where that side lost no bout.
+  const perfectLeg = (exp, legs) => {
+    const earned = new Set();
+    legs.filter((leg) => leg.winner).forEach((leg) => {
+      const attackerWon = leg.winner === leg.attacker;
+      const lost = (leg.bouts || []).some((b) => (attackerWon ? b.p1Pts < b.p2Pts : b.p2Pts < b.p1Pts));
+      if (!lost) deployed(leg, attackerWon ? "attacker" : "defender").forEach((k) => earned.add(k));
+    });
+    return earned;
+  };
+
+  // Deployed in the guild's first encounter (its first fixture and the return leg, same date and round) once every leg
+  // of it is scored. It follows the schedule, so scoring a later encounter first doesn't count as the first.
+  const firstEncounter = (exp, legs) => {
+    const earned = new Set();
+    new Set(legs.flatMap((leg) => [leg.attacker, leg.defender])).forEach((guild) => {
+      const first = legs.find((leg) => leg.attacker === guild || leg.defender === guild);
+      const other = first.attacker === guild ? first.defender : first.attacker;
+      const encounter = legs.filter((leg) => leg.week === first.week && leg.round === first.round && [leg.attacker, leg.defender].includes(guild) && [leg.attacker, leg.defender].includes(other));
+      if (!encounter.every((leg) => leg.winner)) return;
+      encounter.forEach((leg) => deployed(leg, leg.attacker === guild ? "attacker" : "defender").forEach((k) => earned.add(k)));
+    });
+    return earned;
+  };
+
+  const AUTO_ACHIEVEMENTS = {
+    "attack-streak": streak("attacker"),
+    "defense-streak": streak("defender"),
+    "full-deployment": fullDeployment,
+    "perfect-leg": perfectLeg,
+    "first-encounter": firstEncounter,
+    swiss: fromEvents((en) => en.swiss),
+    champion: fromEvents((en) => en.champion),
+    leader: fromEvents((en) => (en.defeated || []).some((d) => d.role === "leader")),
+    "battle-master": fromEvents((en) => (en.defeated || []).some((d) => d.role === "battle-master")),
+  };
+  function earnedAchievements(exp, legs = [], players = [], cfg = window.LEAGUE_CONFIG) {
+    const earned = {};
+    (cfg.playerAchievements || []).forEach((a) => {
+      const work = AUTO_ACHIEVEMENTS[a.auto];
+      earned[a.id] = work ? [...work(exp, legs, players)] : exp.playerAchievements?.[a.id] || [];
+    });
+    return earned;
+  }
+
   // Each guild's season EXP from the admin's EXP document and the siege results.
   // Guild EXP (`exp`) only goes up: Weekly Pods and Grand Raids (`exp.events`), player achievements
-  // (`exp.playerAchievements`: achievement id -> blader keys) and shop receipts (`exp.purchases`).
+  // (earnedAchievements) and shop receipts (`exp.purchases`).
   // Guild Skill EXP (`skillExp`) comes only from sieges, applied one result at a time and kept between 0 and
   // skillExpMax; a skill is unlocked while Skill EXP is at or above its threshold.
-  // sieges: [{ winner, loser, attacker, target }] in the order they were played; the attacker is the fixture's
-  // first guild. playerTeam: Map of blader key -> guild name (EXP goes to the blader's current guild).
+  // sieges: every fixture in the order they're played, [{ week, round, winner, loser, attacker, defender, target, bouts }]
+  // (winner null until scored); the attacker is the fixture's first guild. playerTeam: Map of blader key -> guild name (EXP goes to the blader's current guild).
+  // players: the bladers, for Full Deployment's roster.
   // `members` is each blader's share of the guild's EXP (blader key -> EXP); shop receipts belong to the guild alone.
-  function guildExp(guildNames, sieges, exp, playerTeam, cfg = window.LEAGUE_CONFIG) {
+  function guildExp(guildNames, sieges, exp, playerTeam, players = [], cfg = window.LEAGUE_CONFIG) {
     const S = cfg.siegeSkillExp;
     const skills = (exp.skills || []).slice().sort((a, b) => a.exp - b.exp);
     const out = new Map(guildNames.map((g) => [g, { exp: 0, skillExp: 0, unlocked: 0, guild: { events: 0, achievements: 0, shop: 0 }, siege: 0, members: {} }]));
@@ -173,7 +255,7 @@ window.LEAGUE_CONFIG = {
       if (player) g.members[player] = (g.members[player] || 0) + n;
     };
 
-    sieges.forEach((m) => {
+    sieges.filter((m) => m.winner).forEach((m) => {
       const attackerWon = m.winner === m.attacker;
       const pay = attackerWon
         ? [[m.winner, m.target ? S.successfulTarget : S.attackWin], [m.loser, S.defendLoss]]
@@ -188,11 +270,8 @@ window.LEAGUE_CONFIG = {
 
     (exp.events || []).forEach((ev) => ev.entries.forEach((en) => gain(playerTeam.get(en.player), "events", entryExp(en, ev.type, cfg), en.player)));
 
-    const achById = new Map((cfg.playerAchievements || []).map((a) => [a.id, a]));
-    Object.entries(exp.playerAchievements || {}).forEach(([id, keys]) => {
-      const a = achById.get(id);
-      if (a) keys.forEach((k) => gain(playerTeam.get(k), "achievements", a.exp, k));
-    });
+    const earned = earnedAchievements(exp, sieges, players, cfg);
+    (cfg.playerAchievements || []).forEach((a) => earned[a.id].forEach((k) => gain(playerTeam.get(k), "achievements", a.exp, k)));
 
     (exp.purchases || []).forEach((p) => gain(p.guild, "shop", purchaseExp(p.amount, cfg)));
 
@@ -367,5 +446,5 @@ window.LEAGUE_CONFIG = {
     return { teams: rankTeams(teams), teamsByName, players, playersByKey, league: players.filter((p) => p.eligible).sort(leagueSort) };
   }
 
-  window.leagueTools = { roundRobin, guildExp, entryExp, purchaseExp, leagueStats, leagueSort, rankTeams, medianBuchholz };
+  window.leagueTools = { roundRobin, guildExp, earnedAchievements, entryExp, purchaseExp, leagueStats, leagueSort, rankTeams, medianBuchholz };
 })();

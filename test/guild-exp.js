@@ -2,8 +2,9 @@
 const assert = require("assert");
 global.window = {};
 require("../js/data.js");
-const { guildExp, entryExp, purchaseExp } = window.leagueTools;
+const { guildExp, earnedAchievements, entryExp, purchaseExp } = window.leagueTools;
 const cfg = window.LEAGUE_CONFIG;
+const sorted = (list) => list.slice().sort();
 
 const teams = new Map([["pa", "A"], ["pb", "B"], ["pc", "A"]]);
 const skills = [{ name: "Rally", exp: 50 }, { name: "Fortify", exp: 100 }, { name: "Warcry", exp: 150 }];
@@ -57,16 +58,100 @@ const exp = {
     { id: "e1", type: "pod", entries: [{ player: "pa", entries: 1, champion: true, role: "member" }, { player: "pb", entries: 1 }] },
     { id: "e2", type: "raid", entries: [{ player: "pc", entries: 1, swiss: true }, { player: "gone", entries: 1 }] }, // removed blader: ignored
   ],
-  playerAchievements: { pa1: ["pa", "pc"], pa7: ["pc"], nope: ["pa"] }, // unknown achievement ids are ignored
+  playerAchievements: { pa6: ["pa", "pc"], pa9: ["pb"], nope: ["pa"] }, // unknown ids and ticks on `auto` achievements are ignored
   purchases: [{ guild: "A", amount: 1500 }, { guild: "B", amount: 600 }, { guild: "Gone", amount: 5000 }],
 };
 const all = guildExp(["A", "B"], [], exp, teams);
-assert.deepStrictEqual(all.get("A").guild, { events: 12 + 24, achievements: 10 + 10 + 5, shop: 4 });
-assert.strictEqual(all.get("A").exp, 65);
+// pa6 ticked for pa and pc (+10 each); The Strongest for pa and Swiss King for pc come from the events (+5 each).
+assert.deepStrictEqual(all.get("A").guild, { events: 12 + 24, achievements: 10 + 10 + 5 + 5, shop: 4 });
+assert.strictEqual(all.get("A").exp, 70);
 assert.deepStrictEqual(all.get("B").guild, { events: 2, achievements: 0, shop: 2 });
 // Each blader's share: events and achievements, not the guild's shop receipts.
-assert.deepStrictEqual(all.get("A").members, { pa: 12 + 10, pc: 24 + 10 + 5 });
+assert.deepStrictEqual(all.get("A").members, { pa: 12 + 10 + 5, pc: 24 + 10 + 5 });
 assert.deepStrictEqual(all.get("B").members, { pb: 2 });
+
+// Achievements from events: each counts once however many events earn it, and only by the role recorded with the defeat.
+const earned = earnedAchievements({
+  events: [
+    { type: "pod", entries: [{ player: "a", swiss: true, champion: true, role: "member", defeated: [{ player: "x", role: "leader" }] }, { player: "b", defeated: [{ player: "y", role: "battle-master" }] }, { player: "c", defeated: [{ player: "z", role: "member", bounty: true }] }] },
+    { type: "raid", entries: [{ player: "a", swiss: true, champion: true, role: "leader", defeated: [{ player: "y", role: "leader" }] }] },
+  ],
+  playerAchievements: { pa6: ["t"], pa7: ["ticked"], pa9: ["ticked"] },
+}, [], [], cfg);
+assert.deepStrictEqual(earned.pa6, ["t"]);
+assert.deepStrictEqual(earned.pa7, ["a"]);
+assert.deepStrictEqual(earned.pa8, ["a"]);
+assert.deepStrictEqual(earned.pa9, ["a"]);
+assert.deepStrictEqual(earned.pa10, ["b"]);
+assert.deepStrictEqual(earnedAchievements({}, [], [], cfg).pa7, []);
+
+// Full Deployment: every active blader on the current roster in all four raids. Inactive bladers don't count or earn it.
+const roster = [
+  { key: "a1", team: "A", active: true }, { key: "a2", team: "A", active: true }, { key: "a3", team: "A", active: false },
+  { key: "b1", team: "B", active: true }, { key: "b2", team: "B", active: true },
+];
+const raid = (...keys) => ({ type: "raid", entries: keys.map((player) => ({ player })) });
+const raids = (n, ...keys) => Array.from({ length: n }, () => raid(...keys));
+const full = (events) => sorted(earnedAchievements({ events, playerAchievements: { pa3: ["ticked"] } }, [], roster, cfg).pa3);
+assert.deepStrictEqual(full(raids(4, "a1", "a2", "b1")), ["a1", "a2"]); // b2 missed them, so nobody in B has it; a3 is inactive
+assert.deepStrictEqual(full(raids(3, "a1", "a2", "b1", "b2")), []); // only three so far
+assert.deepStrictEqual(full([...raids(3, "a1", "a2"), raid("a1")]), []); // a2 missed one
+assert.deepStrictEqual(full([...raids(4, "a1", "a2"), { type: "pod", entries: [] }]), ["a1", "a2"]); // pods don't count
+
+// Achievements from siege scores. A leg: attacker A or B, bouts as [attacker's blader, defender's blader, attacker won?].
+const leg = (week, round, attacker, defender, winner, bouts = []) => ({
+  week, round, attacker, defender, winner,
+  bouts: bouts.map(([p1, p2, won]) => ({ p1, p2, p1Pts: won ? 4 : 1, p2Pts: won ? 1 : 4 })),
+});
+const fromLegs = (legs) => earnedAchievements({ playerAchievements: { pa1: ["ticked"], pa2: ["ticked"], pa4: ["ticked"], pa5: ["ticked"] } }, legs, [], cfg);
+
+// War Machine: three of the guild's attack legs won in a row, deployed in each. Legs elsewhere don't interrupt.
+const three = [
+  leg("w1", 1, "A", "B", "A", [["a1", "b1", true], ["a2", "b2", true]]),
+  leg("w1", 1, "C", "D", "C", [["c1", "d1", true]]),
+  leg("w1", 2, "A", "C", "A", [["a1", "c1", true], ["a2", "c2", true]]),
+  leg("w2", 1, "A", "D", "A", [["a1", "d1", true], ["a3", "d2", true]]),
+];
+assert.deepStrictEqual(fromLegs(three).pa1, ["a1"]); // a2 has only played two, a3 one; the tick is ignored
+assert.deepStrictEqual(fromLegs(three.slice(0, 3)).pa1, []); // only two so far
+// A lost leg ends the run of those deployed in it, and one not scored yet ends everyone's.
+assert.deepStrictEqual(fromLegs([three[0], leg("w1", 2, "A", "C", "C", [["a1", "c1", false]]), three[2], three[3]]).pa1, []);
+assert.deepStrictEqual(fromLegs([three[0], leg("w1", 2, "A", "C", null), three[2], three[3]]).pa1, []);
+// Sitting out doesn't: not a win the blader missed, a loss they missed, or a leg won by default (no bouts, nobody deployed).
+const sitOut = [leg("w3", 1, "A", "B", "A", [["a2", "b1", true]])];
+assert.deepStrictEqual(sorted(fromLegs([...three, ...sitOut]).pa1), ["a1", "a2"]); // a2 sat out the third and fourth
+assert.deepStrictEqual(sorted(fromLegs([three[0], leg("w1", 2, "A", "C", "C", [["a3", "c1", false]]), three[2], three[3]]).pa1), ["a1"]);
+assert.deepStrictEqual(fromLegs([three[0], leg("w1", 2, "A", "C", "A"), three[2], three[3]]).pa1, ["a1"]);
+// Losing later doesn't take back a run already earned.
+assert.deepStrictEqual(fromLegs([...three, leg("w3", 1, "A", "B", "B", [["a1", "b1", false]])]).pa1, ["a1"]);
+// Fortress: the same for defense legs, on the defenders. Attacks in between don't interrupt it.
+const held = [
+  leg("w1", 1, "B", "A", "A", [["b1", "a1", false], ["b2", "a2", false]]),
+  leg("w1", 1, "A", "B", "B", [["a1", "b1", false]]),
+  leg("w1", 2, "C", "A", "A", [["c1", "a1", false], ["c2", "a2", true], ["c3", "a3", false]]),
+  leg("w2", 1, "D", "A", "A", [["d1", "a1", false]]),
+];
+assert.deepStrictEqual(fromLegs(held).pa2, ["a1"]);
+assert.deepStrictEqual(fromLegs(held).pa1, []);
+
+// Perfect War: on the winning side of a leg, with no bout lost, attacking or defending.
+assert.deepStrictEqual(sorted(fromLegs(held).pa4), ["a1", "a2", "b1"]); // the third leg dropped a bout, so a3 isn't in; b1 won leg two unbeaten
+assert.deepStrictEqual(fromLegs([leg("w1", 1, "A", "B", "A", [["a1", "b1", true], ["a2", "b2", false], ["a3", "b3", true]])]).pa4, []);
+assert.deepStrictEqual(fromLegs([leg("w1", 1, "A", "B", "A")]).pa4, []); // by default
+assert.deepStrictEqual(fromLegs([leg("w1", 1, "A", "B", null, [])]).pa4, []);
+
+// We Feast Tonight!: deployed in the guild's first encounter, once both its legs are scored, for both guilds.
+const out = leg("w1", 1, "A", "B", "A", [["a1", "b1", true]]);
+const back = leg("w1", 1, "B", "A", "B", [["b2", "a2", true]]);
+const later = leg("w2", 1, "A", "C", "A", [["a9", "c1", true]]);
+assert.deepStrictEqual(fromLegs([out, leg("w1", 1, "B", "A", null), later]).pa5, ["c1"]); // A and B's return leg isn't scored yet; C's first is complete
+assert.deepStrictEqual(sorted(fromLegs([out, back, later]).pa5), ["a1", "a2", "b1", "b2", "c1"]); // a9 played a later one; C's first is this
+// Scoring a later encounter first doesn't make it the guild's first.
+assert.deepStrictEqual(fromLegs([leg("w1", 1, "A", "B", null), leg("w1", 1, "B", "A", null), leg("w2", 1, "A", "C", "A", [["a9", "c1", true]])]).pa5, ["c1"]);
+// A guild's first encounter is the first on the schedule, whichever side it starts on, and a default still completes it.
+assert.deepStrictEqual(sorted(fromLegs([leg("w1", 1, "B", "A", "A"), leg("w1", 1, "A", "B", "A", [["a1", "b1", true]])]).pa5), ["a1", "b1"]);
+// Unscored legs pay no Skill EXP.
+assert.strictEqual(guildExp(["A", "B"], [leg("w1", 1, "A", "B", null)], {}, teams).get("A").skillExp, 0);
 
 // Every blader can earn at most the 70 Achievement EXP the handbook allows.
 assert.strictEqual(cfg.playerAchievements.reduce((n, a) => n + a.exp, 0), 70);

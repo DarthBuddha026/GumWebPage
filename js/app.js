@@ -271,20 +271,19 @@
     // Guild records and blader stats: leagueTools.leagueStats in data.js (shared with the admin's Leaderboards tab).
     const { teams, teamsByName, players, playersByKey, league } = window.leagueTools.leagueStats(raw.teams, raw.players, raw.matches, { weekly: state.currentSiege });
 
-    // Guild EXP and Guild Skill EXP (see leagueTools.guildExp in data.js). Siege results count in the order they
-    // were played: match day by date, then round, then fixture order.
+    // Guild EXP and Guild Skill EXP (see leagueTools.guildExp in data.js). Siege fixtures, played or not, in the order
+    // they're played: match day by date, then round, then fixture order.
     const weekOrder = new Map((raw.weeks || []).map((w, i) => [w.id, i]));
     const sieges = raw.matches
       .map((m, i) => ({ m, i }))
-      .filter(({ m }) => m.result)
       .sort((a, b) => (weekOrder.get(a.m.weekId) ?? 1e9) - (weekOrder.get(b.m.weekId) ?? 1e9) || (a.m.round || 0) - (b.m.round || 0) || a.i - b.i)
-      .map(({ m }) => ({ winner: m.result.winner, loser: m.result.winner === m.team1 ? m.team2 : m.team1, attacker: m.team1, target: m.target }));
-    const exp = window.leagueTools.guildExp(teams.map((t) => t.name), sieges, raw.exp || {}, new Map(players.map((p) => [p.key, p.team])));
+      .map(({ m }) => ({ week: m.weekId, round: m.round, winner: m.result?.winner || null, loser: m.result ? (m.result.winner === m.team1 ? m.team2 : m.team1) : null, attacker: m.team1, defender: m.team2, target: m.target, bouts: m.bouts }));
+    const exp = window.leagueTools.guildExp(teams.map((t) => t.name), sieges, raw.exp || {}, new Map(players.map((p) => [p.key, p.team])), players);
     teams.forEach((t) => (t.xp = exp.get(t.name)));
     players.forEach((p) => (p.xp = exp.get(p.team)?.members[p.key] || 0));
     // GGW2 player achievements each blader has unlocked (shown as cards on their profile, apart from the exclusive badges).
     players.forEach((p) => (p.unlocked = new Set()));
-    (CFG.playerAchievements || []).forEach((a) => (raw.exp?.playerAchievements?.[a.id] || []).forEach((k) => playersByKey.get(k)?.unlocked.add(a.id)));
+    Object.entries(window.leagueTools.earnedAchievements(raw.exp || {}, sieges, players)).forEach(([id, keys]) => keys.forEach((k) => playersByKey.get(k)?.unlocked.add(id)));
     state.expSkills = (raw.exp?.skills || []).slice().sort((a, b) => a.exp - b.exp);
     // The required Guild EXP: the Guild EXP bar is full here, but guilds keep earning past it.
     state.expCap = raw.exp?.cap || 0;
