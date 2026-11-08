@@ -237,6 +237,8 @@
           id: w.id, label: w.label, date: w.date, location: w.location || "",
           // Event details from the admin's week editor, shown in the Schedules page's Upcoming Event panel.
           poster: w.poster || "", time: w.time || "", fee: w.fee || "", link: w.link || "", description: w.description || "",
+          // The Bounty Guild drawn in the admin's Schedule tab (Weekly Pods and Grand Raids).
+          bountyGuild: w.bountyGuild || "",
           progress: inWeek.length ? Math.round((done / inWeek.length) * 100) : w.done ? 100 : 0 };
       });
 
@@ -468,6 +470,7 @@
       ${x.poster ? `<a class="sched-poster" href="${esc(x.poster)}" target="_blank" rel="noopener" data-title="${esc(x.label)}" aria-label="Open the ${esc(x.label)} poster"><img src="${esc(x.poster)}" alt="${esc(x.label)} poster"></a>` : ""}
       <div class="sched-event-info">
         ${upcoming(x, w ? kindName(x) : "Upcoming Event", x.link ? `<a class="sched-link" href="${esc(x.link)}" target="_blank" rel="noopener">More info <i class="fas fa-arrow-up-right-from-square" aria-hidden="true"></i></a>` : "")}
+        ${x.bountyGuild ? `<button type="button" class="sched-bounty" data-open-team="${esc(x.bountyGuild)}"><i class="fas fa-crosshairs" aria-hidden="true"></i> Bounty Guild ${teamAvatar(state.teamsByName.get(x.bountyGuild) || { name: x.bountyGuild })}<b>${esc(x.bountyGuild)}</b></button>` : ""}
         ${x.description ? `<p class="sched-desc">${esc(x.description)}</p>` : ""}
       </div>`;
     // The siege panel shows the Guild Siege picked on the calendar, or else the next one.

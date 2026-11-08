@@ -45,6 +45,8 @@ assert.strictEqual(entryExp({ entries: 1, defeated: [{ role: "member", bounty: t
 assert.strictEqual(entryExp({ entries: 1, defeated: [{ role: "battle-master", bounty: true }] }, "pod", cfg), 17);
 assert.strictEqual(entryExp({ entries: 1, defeated: [{ role: "leader", bounty: true }] }, "pod", cfg), 22);
 assert.strictEqual(entryExp({ entries: 1, defeated: [{ role: "member" }] }, "pod", cfg), 2);
+// At a Grand Raid it doubles like the rest: entry 4, Bounty Guild member +20.
+assert.strictEqual(entryExp({ entries: 1, defeated: [{ role: "member", bounty: true }] }, "raid", cfg), 24);
 
 // ----- Shop support tiers -----
 assert.strictEqual(purchaseExp(499, cfg), 0);

@@ -87,7 +87,7 @@ window.LEAGUE_CONFIG = {
     championLeader: 10, // on top of champion
     bountyBattleMaster: 5, // per opposing Battle Master defeated in the Top Cut
     bountyLeader: 10, // per opposing Guild Leader defeated in the Top Cut
-    bountyGuild: 10, // per member of the Weekly Pod's Bounty Guild defeated in the Final Stage; stacks with the two above
+    bountyGuild: 10, // per member of the Bounty Guild (Weekly Pods and Grand Raids) defeated in the Final Stage; stacks with the two above
     raidMultiplier: 2,
   },
   // Shop support, per approved receipt: the highest tier the qualifying amount reaches.
@@ -141,7 +141,7 @@ window.LEAGUE_CONFIG = {
 
   // Guild EXP for one blader's entry at a Weekly Pod or Grand Raid. `role` and each defeat's `role` are the
   // roles recorded on the event date (leader / battle-master / member). A defeat's `bounty` marks a member of the
-  // Weekly Pod's Bounty Guild.
+  // Bounty Guild drawn for the Weekly Pod or Grand Raid (doubled at raids like the rest).
   function entryExp(entry, type, cfg) {
     const E = cfg.eventExp;
     let n = entry.entries === 2 ? E.double : E.single;

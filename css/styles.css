@@ -1196,6 +1196,12 @@ a { color: inherit; }
 .sched-poster { display: flex; justify-content: center; margin-bottom: 16px; }
 .sched-poster img { display: block; max-width: 100%; max-height: 360px; border: 2px solid var(--glow); border-radius: 8px; }
 .sched-fee { color: var(--glow); font-weight: 600; }
+/* The Bounty Guild drawn for a Weekly Pod or Grand Raid; opens the guild. */
+.sched-bounty { display: inline-flex; align-items: center; gap: 8px; margin-top: 4px; padding: 6px 12px 6px 10px; border: 1px solid var(--glow); border-radius: 6px; background: rgba(var(--bone-rgb), 0.04); color: var(--ash); font: inherit; font-size: var(--t-s); cursor: pointer; }
+.sched-bounty:hover, .sched-bounty:focus-visible { background: rgba(var(--bone-rgb), 0.09); }
+.sched-bounty .fa-crosshairs { color: var(--glow); }
+.sched-bounty .avatar { width: 26px; height: 26px; font-size: 0.6rem; }
+.sched-bounty b { color: var(--bone); }
 .sched-desc { margin: 10px 0 0; font-size: var(--t-s); line-height: 1.5; white-space: pre-line; }
 /* Desktop: the calendar and the event panel keep one height whatever month or event is showing. The
    weeks share the calendar's height; long event details scroll under the poster. */
