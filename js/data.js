@@ -142,14 +142,26 @@ window.LEAGUE_CONFIG = {
   // Guild EXP for one blader's entry at a Weekly Pod or Grand Raid. `role` and each defeat's `role` are the
   // roles recorded on the event date (leader / battle-master / member). A defeat's `bounty` marks a member of the
   // Bounty Guild drawn for the Weekly Pod or Grand Raid (doubled at raids like the rest).
-  function entryExp(entry, type, cfg) {
+  // entryExpParts lists what the entry paid, one line each ({ kind, n, player? }, raid doubling included) for the
+  // battle log; entryExp is their total.
+  function entryExpParts(entry, type, cfg) {
     const E = cfg.eventExp;
-    let n = entry.entries === 2 ? E.double : E.single;
-    if (entry.swiss) n += E.swiss;
-    if (entry.champion) n += E.champion + (entry.role === "leader" ? E.championLeader : entry.role === "battle-master" ? E.championBattleMaster : 0);
-    (entry.defeated || []).forEach((d) => (n += (d.role === "leader" ? E.bountyLeader : d.role === "battle-master" ? E.bountyBattleMaster : 0) + (d.bounty ? E.bountyGuild : 0)));
-    return type === "raid" ? n * E.raidMultiplier : n;
+    const x = type === "raid" ? E.raidMultiplier : 1;
+    const parts = [entry.entries === 2 ? { kind: "double", n: E.double } : { kind: "single", n: E.single }];
+    if (entry.swiss) parts.push({ kind: "swiss", n: E.swiss });
+    if (entry.champion) {
+      parts.push({ kind: "champion", n: E.champion });
+      if (entry.role === "leader") parts.push({ kind: "champion-leader", n: E.championLeader });
+      else if (entry.role === "battle-master") parts.push({ kind: "champion-battle-master", n: E.championBattleMaster });
+    }
+    (entry.defeated || []).forEach((d) => {
+      if (d.role === "leader") parts.push({ kind: "bounty-leader", n: E.bountyLeader, player: d.player });
+      else if (d.role === "battle-master") parts.push({ kind: "bounty-battle-master", n: E.bountyBattleMaster, player: d.player });
+      if (d.bounty) parts.push({ kind: "bounty-guild", n: E.bountyGuild, player: d.player });
+    });
+    return parts.map((p) => ({ ...p, n: p.n * x }));
   }
+  const entryExp = (entry, type, cfg) => entryExpParts(entry, type, cfg).reduce((sum, p) => sum + p.n, 0);
 
   // Guild EXP for one shop receipt: the highest tier its amount reaches.
   const purchaseExp = (amount, cfg) => cfg.shopExp.find((t) => amount >= t.min)?.exp || 0;
@@ -243,37 +255,57 @@ window.LEAGUE_CONFIG = {
   // (winner null until scored); the attacker is the fixture's first guild. playerTeam: Map of blader key -> guild name (EXP goes to the blader's current guild).
   // players: the bladers, for Full Deployment's roster.
   // `members` is each blader's share of the guild's EXP (blader key -> EXP); shop receipts belong to the guild alone.
+  // `log` itemises every change for the battle log, in this order: siege results in play order
+  // ({ kind: "siege", leg, result, n, applied, skillExp, unlocked, relocked }: `applied` is the change after clamping,
+  // `unlocked`/`relocked` the skills it crossed), then { kind: "event", event, player, n, parts },
+  // { kind: "achievement", achievement, player, n } and { kind: "shop", purchase, n }.
   function guildExp(guildNames, sieges, exp, playerTeam, players = [], cfg = window.LEAGUE_CONFIG) {
     const S = cfg.siegeSkillExp;
     const skills = (exp.skills || []).slice().sort((a, b) => a.exp - b.exp);
-    const out = new Map(guildNames.map((g) => [g, { exp: 0, skillExp: 0, unlocked: 0, guild: { events: 0, achievements: 0, shop: 0 }, siege: 0, members: {} }]));
-    const gain = (guild, part, n, player) => {
+    const out = new Map(guildNames.map((g) => [g, { exp: 0, skillExp: 0, unlocked: 0, guild: { events: 0, achievements: 0, shop: 0 }, siege: 0, members: {}, log: [] }]));
+    const gain = (guild, part, n, player, line) => {
       const g = out.get(guild);
       if (!g || !n) return;
       g.exp += n;
       g.guild[part] += n;
       if (player) g.members[player] = (g.members[player] || 0) + n;
+      g.log.push({ ...line, player, n });
     };
+    const reached = (v) => skills.filter((s) => v >= s.exp);
 
-    sieges.filter((m) => m.winner).forEach((m) => {
-      const attackerWon = m.winner === m.attacker;
+    sieges.filter((m) => m.winner).forEach((leg) => {
+      const attackerWon = leg.winner === leg.attacker;
       const pay = attackerWon
-        ? [[m.winner, m.target ? S.successfulTarget : S.attackWin], [m.loser, S.defendLoss]]
-        : [[m.winner, S.defendWin], [m.loser, S.attackLoss]];
-      pay.forEach(([guild, n]) => {
+        ? [[leg.winner, leg.target ? "successfulTarget" : "attackWin"], [leg.loser, "defendLoss"]]
+        : [[leg.winner, "defendWin"], [leg.loser, "attackLoss"]];
+      pay.forEach(([guild, result]) => {
         const g = out.get(guild);
         if (!g) return;
+        const n = S[result];
+        const before = g.skillExp;
         g.siege += n;
         g.skillExp = Math.min(cfg.skillExpMax, Math.max(0, g.skillExp + n));
+        const was = reached(before);
+        const now = reached(g.skillExp);
+        g.log.push({
+          kind: "siege", leg, result, n, applied: g.skillExp - before, skillExp: g.skillExp,
+          unlocked: now.filter((s) => !was.includes(s)).map((s) => s.name),
+          relocked: was.filter((s) => !now.includes(s)).map((s) => s.name),
+        });
       });
     });
 
-    (exp.events || []).forEach((ev) => ev.entries.forEach((en) => gain(playerTeam.get(en.player), "events", entryExp(en, ev.type, cfg), en.player)));
+    (exp.events || []).forEach((ev) =>
+      ev.entries.forEach((en) => {
+        const parts = entryExpParts(en, ev.type, cfg);
+        gain(playerTeam.get(en.player), "events", parts.reduce((sum, p) => sum + p.n, 0), en.player, { kind: "event", event: ev, parts });
+      })
+    );
 
     const earned = earnedAchievements(exp, sieges, players, cfg);
-    (cfg.playerAchievements || []).forEach((a) => earned[a.id].forEach((k) => gain(playerTeam.get(k), "achievements", a.exp, k)));
+    (cfg.playerAchievements || []).forEach((a) => earned[a.id].forEach((k) => gain(playerTeam.get(k), "achievements", a.exp, k, { kind: "achievement", achievement: a })));
 
-    (exp.purchases || []).forEach((p) => gain(p.guild, "shop", purchaseExp(p.amount, cfg)));
+    (exp.purchases || []).forEach((p) => gain(p.guild, "shop", purchaseExp(p.amount, cfg), undefined, { kind: "shop", purchase: p }));
 
     out.forEach((g) => (g.unlocked = skills.filter((s) => g.skillExp >= s.exp).length));
     return out;
@@ -446,5 +478,5 @@ window.LEAGUE_CONFIG = {
     return { teams: rankTeams(teams), teamsByName, players, playersByKey, league: players.filter((p) => p.eligible).sort(leagueSort) };
   }
 
-  window.leagueTools = { roundRobin, guildExp, earnedAchievements, entryExp, purchaseExp, leagueStats, leagueSort, rankTeams, medianBuchholz };
+  window.leagueTools = { roundRobin, guildExp, earnedAchievements, entryExp, entryExpParts, purchaseExp, leagueStats, leagueSort, rankTeams, medianBuchholz };
 })();

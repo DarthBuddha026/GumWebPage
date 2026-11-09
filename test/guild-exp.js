@@ -158,4 +158,25 @@ assert.strictEqual(guildExp(["A", "B"], [leg("w1", 1, "A", "B", null)], {}, team
 // Every blader can earn at most the 70 Achievement EXP the handbook allows.
 assert.strictEqual(cfg.playerAchievements.reduce((n, a) => n + a.exp, 0), 70);
 
+// ----- The itemised log the battle log shows -----
+// Siege lines: the result, the change after clamping, the running Skill EXP and the skills crossed.
+const logA = guildExp(["A", "B"], [...many.slice(0, 3), { winner: "B", loser: "A", attacker: "A", target: false }], { skills }, teams).get("A").log;
+assert.deepStrictEqual(logA.map((l) => [l.result, l.applied, l.skillExp, l.unlocked, l.relocked]), [
+  ["successfulTarget", 40, 40, [], []],
+  ["successfulTarget", 40, 80, ["Rally"], []],
+  ["successfulTarget", 40, 120, ["Fortify"], []],
+  ["attackLoss", -4, 116, [], []],
+]);
+const logB = guildExp(["A", "B"], sieges.slice(0, 1), { skills }, teams).get("B").log;
+assert.deepStrictEqual([logB[0].n, logB[0].applied], [-8, 0]); // a loss at 0 changes nothing
+// Event lines carry each part (raid doubling included) and add up to the entry; the totals still match.
+assert.deepStrictEqual(window.leagueTools.entryExpParts({ entries: 1, champion: true, role: "leader", defeated: [{ player: "x", role: "leader", bounty: true }] }, "raid", cfg), [
+  { kind: "single", n: 4 }, { kind: "champion", n: 20 }, { kind: "champion-leader", n: 20 }, { kind: "bounty-leader", n: 20, player: "x" }, { kind: "bounty-guild", n: 20, player: "x" },
+]);
+const logAll = all.get("A").log;
+assert.strictEqual(logAll.reduce((n, l) => n + l.n, 0), all.get("A").exp);
+assert.deepStrictEqual(logAll.filter((l) => l.kind === "event").map((l) => [l.player, l.n, l.parts.reduce((n, p) => n + p.n, 0)]), [["pa", 12, 12], ["pc", 24, 24]]);
+assert.deepStrictEqual(logAll.filter((l) => l.kind === "shop").map((l) => [l.player, l.n]), [[undefined, 4]]);
+assert.strictEqual(logAll.filter((l) => l.kind === "achievement").length, 4);
+
 console.log("guildExp ok");

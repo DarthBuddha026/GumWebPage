@@ -1640,6 +1640,41 @@ a { color: inherit; }
 .round-key .swatch.hollow { background: transparent; box-shadow: inset 0 0 0 2px var(--ash); }
 .round-key .swatch.solid { background: var(--ash); }
 
+/* Battle log: how the EXP was earned */
+.exp-log { border-top: 1px solid var(--line); }
+.exp-summary { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 8px; margin: 0 0 4px; font-size: var(--t-s); font-variant-numeric: tabular-nums; }
+.exp-summary b { font-size: var(--t-2xl); color: var(--pink); }
+.exp-summary small { color: var(--ash); }
+.exp-summary span { color: var(--ash); font-size: var(--t-xs); }
+.exp-section { margin-top: 20px; }
+.exp-section h5, .exp-section h6 { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; }
+.exp-section h5 { margin: 0 0 8px; font-family: var(--font-title); font-weight: 400; font-size: var(--t-l); line-height: 1; }
+.exp-section h6 { margin: 16px 0 4px; font-size: var(--t-s); font-weight: 600; }
+.exp-rule { margin: 0 0 8px; color: var(--ash); font-size: var(--t-xs); }
+.exp-lines { list-style: none; margin: 0 0 8px; padding: 0; }
+.exp-line { display: grid; grid-template-columns: 20px minmax(0, 1fr) auto; align-items: start; gap: 10px; padding: 9px 0; border-bottom: 1px solid var(--line); font-size: var(--t-s); }
+.exp-line > i { margin-top: 3px; color: var(--ash); text-align: center; }
+.exp-line.gain > i { color: var(--teal-bright); }
+.exp-line.loss > i { color: var(--pink); }
+.exp-line.quest-line > i { color: var(--pink); }
+.exp-line.empty { grid-template-columns: minmax(0, 1fr); color: var(--ash); }
+.exp-line-text { min-width: 0; color: var(--bone); }
+.exp-line-text b { display: block; font-weight: 600; }
+.exp-line-text > span:not(.exp-parts, .exp-chips) { display: block; color: var(--ash); font-size: var(--t-xs); }
+.exp-amount { font-weight: 700; font-variant-numeric: tabular-nums; white-space: nowrap; text-align: right; }
+.exp-amount small { color: var(--ash); font-weight: 400; font-size: var(--t-xs); }
+.exp-line.quest-line .exp-amount { color: var(--pink); font-size: var(--t-xs); text-transform: uppercase; letter-spacing: 0.06em; }
+.exp-parts, .exp-chips { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 6px; }
+.exp-parts span { padding: 2px 6px; border: 1px solid var(--line); border-radius: 4px; color: var(--ash); font-size: var(--t-xs); }
+.exp-parts b { display: inline; color: var(--teal-bright); font-weight: 600; font-variant-numeric: tabular-nums; }
+.exp-chip { display: inline-flex; align-items: center; gap: 4px; padding: 1px 6px; border: 1px solid var(--line); border-radius: 4px; font-size: var(--t-xs); font-weight: 600; font-variant-numeric: tabular-nums; }
+.exp-chip.unlock { border-color: var(--teal-bright); color: var(--teal-bright); }
+.exp-chip.relock { border-color: var(--pink); color: var(--pink); }
+.exp-member { border-left-color: var(--pink); }
+.exp-member-id { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.exp-member .encounter-result .exp-amount { color: var(--pink); }
+.exp-member .encounter-bouts .small-btn { margin-top: 4px; }
+
 /* Brackets */
 
 .bracket-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }

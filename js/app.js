@@ -282,7 +282,7 @@
     const sieges = raw.matches
       .map((m, i) => ({ m, i }))
       .sort((a, b) => (weekOrder.get(a.m.weekId) ?? 1e9) - (weekOrder.get(b.m.weekId) ?? 1e9) || (a.m.round || 0) - (b.m.round || 0) || a.i - b.i)
-      .map(({ m }) => ({ week: m.weekId, round: m.round, winner: m.result?.winner || null, loser: m.result ? (m.result.winner === m.team1 ? m.team2 : m.team1) : null, attacker: m.team1, defender: m.team2, target: m.target, bouts: m.bouts }));
+      .map(({ m }) => ({ week: m.weekId, round: m.round, winner: m.result?.winner || null, loser: m.result ? (m.result.winner === m.team1 ? m.team2 : m.team1) : null, attacker: m.team1, defender: m.team2, target: m.target, bouts: m.bouts, match: m }));
     const exp = window.leagueTools.guildExp(teams.map((t) => t.name), sieges, raw.exp || {}, new Map(players.map((p) => [p.key, p.team])), players);
     teams.forEach((t) => (t.xp = exp.get(t.name)));
     players.forEach((p) => (p.xp = exp.get(p.team)?.members[p.key] || 0));
@@ -1534,7 +1534,7 @@
             ${teamAvatar(t)}
             <div class="stack">
               <span class="primary">${esc(t.name)}</span>
-              <span class="secondary"><span>${plural(t.played, "match", "matches")} played</span><span>${record(t.wins, t.losses)} record</span></span>
+              <span class="secondary"><span>${plural(t.played, "match", "matches")} played</span><span>${record(t.wins, t.losses)} record</span>${state.expCap && t.xp ? `<span>${t.xp.exp.toLocaleString()} Guild EXP</span>` : ""}</span>
             </div>
             ${bracketBadge(t.bracket)}
             <i class="fas fa-chevron-right chev" aria-hidden="true"></i>
@@ -1570,13 +1570,14 @@
         const won = r.winner === t.name;
 
         const bouts = m.bouts.map((b) => boutRow(b, mine, t.name, opp)).join("");
+        const skill = state.expSkills.length ? t.xp?.log.find((l) => l.kind === "siege" && l.leg.match === m) : null;
 
         return `
           <div class="encounter ${won ? "won" : "lost"}" id="enc-${i}">
             <button class="encounter-head" data-toggle-group="enc-${i}" aria-expanded="false" aria-controls="enc-${i}-bouts">
               <span>
                 <span class="encounter-title">${esc(t.name)}<span class="vs">vs</span>${esc(opp)}</span>
-                <span class="encounter-sub">${sideTag(m, mine === 1)}<span>${esc(m.week)}</span><span>${plural(m.bouts.length, "battle")}</span><span>${myPts}–${oppPts} points</span></span>
+                <span class="encounter-sub">${sideTag(m, mine === 1)}<span>${esc(m.week)}</span><span>${plural(m.bouts.length, "battle")}</span><span>${myPts}–${oppPts} points</span>${skill ? skillChips(skill) : ""}</span>
               </span>
               <span class="encounter-result">
                 <span class="outcome ${won ? "win" : "loss"}">${won ? "Win" : "Loss"}</span>
@@ -1626,6 +1627,182 @@
             ${roundKey}
             ${encounters}`
           : emptyState("fa-scroll", "No battles recorded yet", `${t.name}'s matches will show here once they're played.`)}
+      </div>
+      ${expLog(t)}`;
+  }
+
+  // ----- Battle log: how the EXP was earned -----
+  // Guild-wide: Guild Skill EXP from each siege result (and the skills it unlocked), shop receipts and Guild Quest badges.
+  // Per blader: the Guild EXP each one earned for the guild at Weekly Pods, Grand Raids and through achievements.
+  // Built from the itemised `log` of leagueTools.guildExp (data.js).
+
+  const SIEGE_RESULTS = { attackWin: "Attack win", successfulTarget: "Successful target", defendWin: "Defend win", attackLoss: "Attack loss", defendLoss: "Defend loss" };
+  const ENTRY_PARTS = {
+    single: "Single entry",
+    double: "Double entry",
+    swiss: "Swiss King or Queen",
+    champion: "Champion",
+    "champion-leader": "Champion as Guild Leader",
+    "champion-battle-master": "Champion as Battle Master",
+    "bounty-leader": "Defeated Guild Leader",
+    "bounty-battle-master": "Defeated Battle Master",
+    "bounty-guild": "Defeated Bounty Guild member",
+  };
+  const expFmt = (n) => (n > 0 ? `+${n.toLocaleString()}` : n < 0 ? `−${Math.abs(n).toLocaleString()}` : "0");
+  const peso = (n) => `₱${Number(n).toLocaleString(undefined, { maximumFractionDigits: 2 })}`;
+
+  // The skills a siege result unlocked or locked again.
+  const skillTags = (l) =>
+    [
+      ...l.unlocked.map((name) => `<span class="exp-chip unlock"><i class="fas fa-lock-open" aria-hidden="true"></i> ${esc(name)} unlocked</span>`),
+      ...l.relocked.map((name) => `<span class="exp-chip relock"><i class="fas fa-lock" aria-hidden="true"></i> ${esc(name)} locked again</span>`),
+    ].join("");
+  // On an encounter: the Skill EXP the result moved, plus any skill it crossed.
+  // When the 0..skillExpMax range clamps it, the chip says what actually counted.
+  const skillChips = (l) => {
+    const counted = l.applied === l.n ? "" : l.applied ? ` (${expFmt(l.applied)} counted)` : l.n < 0 ? " (already at 0)" : " (already at max)";
+    return `<span class="exp-chip ${signClass(l.n)}">${expFmt(l.n)} Skill EXP${counted}</span>${skillTags(l)}`;
+  };
+
+  const expLine = ({ icon, title, sub = "", amount, cls = "", extra = "" }) => `
+    <li class="exp-line ${cls}">
+      <i class="fas ${icon}" aria-hidden="true"></i>
+      <span class="exp-line-text"><b>${title}</b>${sub ? `<span>${sub}</span>` : ""}${extra}</span>
+      <span class="exp-amount">${amount}</span>
+    </li>`;
+
+  function expLog(t) {
+    const x = t.xp;
+    const cap = state.expCap;
+    const skills = state.expSkills;
+    if (!x || (!cap && !skills.length)) return "";
+    const S = CFG.siegeSkillExp;
+    const empty = (text) => `<li class="exp-line empty"><span class="exp-line-text"><span>${text}</span></span></li>`;
+    const byDate = (a, b) => String(a || "").localeCompare(String(b || ""));
+
+    // Earned as a guild
+    const guildParts = [];
+    if (skills.length) {
+      const lines = x.log
+        .filter((l) => l.kind === "siege")
+        .map((l) => {
+          const attacking = l.leg.attacker === t.name;
+          const opp = attacking ? l.leg.defender : l.leg.attacker;
+          const clamped = l.applied !== l.n ? ` (${expFmt(l.n)}, ${l.n > 0 ? `capped at ${CFG.skillExpMax}` : "can't go below 0"})` : "";
+          const tags = skillTags(l);
+          return expLine({
+            icon: attacking ? (l.leg.target ? "fa-crosshairs" : "fa-burst") : "fa-shield-halved",
+            title: `${SIEGE_RESULTS[l.result]} vs ${esc(opp)}`,
+            sub: `${esc(l.leg.match?.week || "Guild Siege")}${l.leg.round ? ` · Round ${l.leg.round}` : ""} · Skill EXP now ${l.skillExp} / ${CFG.skillExpMax}${clamped}`,
+            amount: `${expFmt(l.applied)} <small>Skill EXP</small>`,
+            cls: signClass(l.applied),
+            extra: tags ? `<span class="exp-chips">${tags}</span>` : "",
+          });
+        });
+      guildParts.push(`
+        <h6>Skill EXP from siege results <span class="exp-total">${x.skillExp} <small>/ ${CFG.skillExpMax}</small></span></h6>
+        <p class="exp-rule">Attack win ${expFmt(S.attackWin)} · Successful target ${expFmt(S.successfulTarget)} · Defend win ${expFmt(S.defendWin)} · Attack loss ${expFmt(S.attackLoss)} · Defend loss ${expFmt(S.defendLoss)}. Skills unlock at ${skills.map((s) => `${esc(s.name)} ${s.exp}`).join(", ")}.</p>
+        <ul class="exp-lines">${lines.join("") || empty("No siege results yet.")}</ul>`);
+    }
+    if (cap) {
+      const lines = x.log
+        .filter((l) => l.kind === "shop")
+        .sort((a, b) => byDate(a.purchase.date, b.purchase.date))
+        .map((l) =>
+          expLine({
+            icon: "fa-receipt",
+            title: `Shop receipt #${esc(l.purchase.receipt)}`,
+            sub: `${l.purchase.date ? `${shortDate(l.purchase.date)} · ` : ""}${peso(l.purchase.amount)}`,
+            amount: `${expFmt(l.n)} <small>Guild EXP</small>`,
+            cls: "gain",
+          })
+        );
+      guildParts.push(`
+        <h6>Shop support <span class="exp-total">${expFmt(x.guild.shop)} <small>Guild EXP</small></span></h6>
+        <p class="exp-rule">Per approved receipt: ${CFG.shopExp.map((tier) => `${peso(tier.min)} or more ${expFmt(tier.exp)}`).join(", ")}.</p>
+        <ul class="exp-lines">${lines.join("") || empty("No shop receipts yet.")}</ul>`);
+    }
+    const quests = CFG.guildQuests || [];
+    if (quests.length) {
+      const done = quests.filter((q) => (state.raw.exp?.quests?.[q.id] || []).includes(t.name));
+      const lines = done.map((q) => expLine({ icon: q.icon || "fa-medal", title: `Quest ${esc(q.numeral)}: ${esc(q.name)}`, sub: esc(q.text), amount: "Badge", cls: "quest-line" }));
+      guildParts.push(`
+        <h6>Guild Quest badges <span class="exp-total">${done.length} <small>/ ${quests.length}</small></span></h6>
+        <p class="exp-rule">A quest unlocks its badge when the organizers mark it complete. Quests don't add EXP.</p>
+        <ul class="exp-lines">${lines.join("") || empty("No quests completed yet.")}</ul>`);
+    }
+
+    // Earned by each blader
+    let bladerPart = "";
+    if (cap) {
+      const roster = state.players.filter((p) => p.team === t.name);
+      const earners = roster.filter((p) => x.members[p.key]).sort((a, b) => x.members[b.key] - x.members[a.key] || a.name.localeCompare(b.name));
+      const none = roster.filter((p) => !x.members[p.key]);
+      const items = earners
+        .map((p, i) => {
+          const mine = x.log.filter((l) => l.player === p.key);
+          const events = mine.filter((l) => l.kind === "event").sort((a, b) => byDate(a.event.date, b.event.date));
+          const achievements = mine.filter((l) => l.kind === "achievement");
+          const lines = [
+            ...events.map((l) => {
+              const raid = l.event.type === "raid";
+              const parts = l.parts
+                .map((part) => `<span>${ENTRY_PARTS[part.kind] || esc(part.kind)}${part.player ? ` ${esc(playerOrUnknown(part.player).name)}` : ""} <b>${expFmt(part.n)}</b></span>`)
+                .join("");
+              return expLine({
+                icon: raid ? "fa-dragon" : "fa-chess-board",
+                title: esc(l.event.name),
+                sub: `${raid ? `Grand Raid · EXP ×${CFG.eventExp.raidMultiplier}` : "Weekly Pod"}${l.event.date ? ` · ${shortDate(l.event.date)}` : ""}`,
+                amount: expFmt(l.n),
+                cls: "gain",
+                extra: `<span class="exp-parts">${parts}</span>`,
+              });
+            }),
+            ...achievements.map((l) =>
+              expLine({ icon: l.achievement.icon || "fa-medal", title: `Achievement: ${esc(l.achievement.name)}`, sub: esc(l.achievement.text), amount: expFmt(l.n), cls: "gain" })
+            ),
+          ].join("");
+          const summary = [events.length && plural(events.length, "pod or raid", "pods and raids"), achievements.length && plural(achievements.length, "achievement")].filter(Boolean).join(" · ");
+          return `
+          <div class="encounter exp-member" id="exp-${i}">
+            <button class="encounter-head" data-toggle-group="exp-${i}" aria-expanded="false" aria-controls="exp-${i}-lines">
+              <span class="exp-member-id">
+                ${playerAvatar(p)}
+                <span>
+                  <span class="encounter-title">${esc(p.name)}</span>
+                  <span class="encounter-sub"><span>${summary}</span></span>
+                </span>
+              </span>
+              <span class="encounter-result">
+                <span class="exp-amount">${expFmt(x.members[p.key])} <small>Guild EXP</small></span>
+                <i class="fas fa-chevron-down encounter-chev" aria-hidden="true"></i>
+              </span>
+            </button>
+            <div class="encounter-bouts" id="exp-${i}-lines">
+              <ul class="exp-lines">${lines}</ul>
+              <button class="small-btn" data-open-player="${esc(p.key)}"><i class="fas fa-user" aria-hidden="true"></i> ${esc(p.name)}'s profile</button>
+            </div>
+          </div>`;
+        })
+        .join("");
+      bladerPart = `
+        <div class="exp-section">
+          <h5>Earned by bladers <span class="exp-total">${expFmt(x.guild.events + x.guild.achievements)} <small>Guild EXP</small></span></h5>
+          <p class="exp-rule">What each blader earned for the guild at Weekly Pods and Grand Raids (Grand Raids pay double) and through achievements. Tap a blader for the details.</p>
+          ${items || `<ul class="exp-lines">${empty("No blader has earned EXP yet.")}</ul>`}
+          ${earners.length && none.length ? `<p class="exp-rule">No EXP yet: ${none.map((p) => esc(p.name)).join(", ")}.</p>` : ""}
+        </div>`;
+    }
+
+    return `
+      <div class="log-list exp-log">
+        <div class="log-toolbar"><p>How the EXP was earned</p></div>
+        ${cap ? `<p class="exp-summary"><b>${x.exp.toLocaleString()}</b> <small>/ ${cap.toLocaleString()}</small> Guild EXP <span>Bladers ${expFmt(x.guild.events + x.guild.achievements)} · Shop ${expFmt(x.guild.shop)}</span></p>` : ""}
+        <div class="exp-section">
+          <h5>Earned as a guild</h5>
+          ${guildParts.join("")}
+        </div>
+        ${bladerPart}
       </div>`;
   }
 
@@ -1795,7 +1972,7 @@
       const toggleAll = e.target.closest("[data-toggle-all]");
       if (toggleAll) {
         const expand = toggleAll.dataset.toggleAll === "1";
-        return $$("#history-matches .encounter").forEach((el) => setEncounter(el, expand));
+        return $$("#history-matches .encounter:not(.exp-member)").forEach((el) => setEncounter(el, expand));
       }
 
       const historyTeam = e.target.closest("[data-history-team]");
