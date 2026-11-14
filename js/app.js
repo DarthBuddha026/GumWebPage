@@ -239,6 +239,8 @@
           poster: w.poster || "", time: w.time || "", fee: w.fee || "", link: w.link || "", description: w.description || "",
           // The Bounty Guild drawn in the admin's Schedule tab (Weekly Pods and Grand Raids).
           bountyGuild: w.bountyGuild || "",
+          // A Guild Siege's target guilds: { guild: [up to 3 guilds] }, set in the admin's week editor.
+          targets: w.targets || {},
           progress: inWeek.length ? Math.round((done / inWeek.length) * 100) : w.done ? 100 : 0 };
       });
 
@@ -466,12 +468,22 @@
     // and the details uploaded in the admin.
     const kindName = (x) => (kind(x) === "siege" ? "Guild Siege" : kind(x) === "raid" ? "Grand Raid" : "EXP Farm Event");
     const shownEvent = w || upNext;
+    // Each guild's target guilds for a Guild Siege; every guild opens its profile.
+    const targetButton = (name, main) => `<button type="button" class="sched-target" data-open-team="${esc(name)}">${teamAvatar(state.teamsByName.get(name) || { name })}${main ? `<b>${esc(name)}</b>` : `<span>${esc(name)}</span>`}</button>`;
+    const targetList = (targets) => {
+      const rows = Object.entries(targets || {});
+      if (!rows.length) return "";
+      return `<div class="sched-targets"><p class="sched-kicker">Target guilds</p><ul>${rows
+        .map(([g, list]) => `<li>${targetButton(g, true)}<i class="fas fa-crosshairs" aria-hidden="true"></i><span class="sched-target-picks">${list.map((t) => targetButton(t)).join("")}</span></li>`)
+        .join("")}</ul></div>`;
+    };
     const eventPanel = (x) => `
       ${x.poster ? `<a class="sched-poster" href="${esc(x.poster)}" target="_blank" rel="noopener" data-title="${esc(x.label)}" aria-label="Open the ${esc(x.label)} poster"><img src="${esc(x.poster)}" alt="${esc(x.label)} poster"></a>` : ""}
       <div class="sched-event-info">
         ${upcoming(x, w ? kindName(x) : "Upcoming Event", x.link ? `<a class="sched-link" href="${esc(x.link)}" target="_blank" rel="noopener">More info <i class="fas fa-arrow-up-right-from-square" aria-hidden="true"></i></a>` : "")}
         ${x.bountyGuild ? `<button type="button" class="sched-bounty" data-open-team="${esc(x.bountyGuild)}"><i class="fas fa-crosshairs" aria-hidden="true"></i> Bounty Guild ${teamAvatar(state.teamsByName.get(x.bountyGuild) || { name: x.bountyGuild })}<b>${esc(x.bountyGuild)}</b></button>` : ""}
         ${x.description ? `<p class="sched-desc">${esc(x.description)}</p>` : ""}
+        ${targetList(x.targets)}
       </div>`;
     // The siege panel shows the Guild Siege picked on the calendar, or else the next one.
     const nextSiege = next((x) => kind(x) === "siege");
