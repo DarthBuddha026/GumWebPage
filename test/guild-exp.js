@@ -47,6 +47,9 @@ assert.strictEqual(entryExp({ entries: 1, defeated: [{ role: "leader", bounty: t
 assert.strictEqual(entryExp({ entries: 1, defeated: [{ role: "member" }] }, "pod", cfg), 2);
 // At a Grand Raid it doubles like the rest: entry 4, Bounty Guild member +20.
 assert.strictEqual(entryExp({ entries: 1, defeated: [{ role: "member", bounty: true }] }, "raid", cfg), 24);
+// Both entries of a double-entry Guild Leader in the Bounty Guild beaten: each entry pays.
+assert.strictEqual(entryExp({ entries: 1, defeated: [{ role: "leader", bounty: true, times: 2 }] }, "pod", cfg), 42);
+assert.strictEqual(entryExp({ entries: 1, defeated: [{ role: "battle-master", times: 2 }] }, "raid", cfg), 24);
 
 // ----- Shop support tiers -----
 assert.strictEqual(purchaseExp(499, cfg), 0);

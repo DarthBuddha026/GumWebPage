@@ -141,7 +141,8 @@ window.LEAGUE_CONFIG = {
 
   // Guild EXP for one blader's entry at a Weekly Pod or Grand Raid. `role` and each defeat's `role` are the
   // roles recorded on the event date (leader / battle-master / member). A defeat's `bounty` marks a member of the
-  // Bounty Guild drawn for the Weekly Pod or Grand Raid (doubled at raids like the rest).
+  // Bounty Guild drawn for the Weekly Pod or Grand Raid (doubled at raids like the rest). A defeat's `times: 2` means both
+  // entries of a double-entry blader were beaten; each entry counts, so its lines appear (and pay) twice.
   // entryExpParts lists what the entry paid, one line each ({ kind, n, player? }, raid doubling included) for the
   // battle log; entryExp is their total.
   function entryExpParts(entry, type, cfg) {
@@ -154,7 +155,7 @@ window.LEAGUE_CONFIG = {
       if (entry.role === "leader") parts.push({ kind: "champion-leader", n: E.championLeader });
       else if (entry.role === "battle-master") parts.push({ kind: "champion-battle-master", n: E.championBattleMaster });
     }
-    (entry.defeated || []).forEach((d) => {
+    (entry.defeated || []).flatMap((d) => (d.times === 2 ? [d, d] : [d])).forEach((d) => {
       if (d.role === "leader") parts.push({ kind: "bounty-leader", n: E.bountyLeader, player: d.player });
       else if (d.role === "battle-master") parts.push({ kind: "bounty-battle-master", n: E.bountyBattleMaster, player: d.player });
       if (d.bounty) parts.push({ kind: "bounty-guild", n: E.bountyGuild, player: d.player });
