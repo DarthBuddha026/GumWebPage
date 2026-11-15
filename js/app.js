@@ -1378,7 +1378,6 @@
           ${statRow("Points per game", fmt2(o.ppg))}
           ${statRow("Points given up per game", o.games ? fmt2(o.conceded / o.games) : "–")}
           ${statRow("Attendance", pct(p.attendance))}
-          ${statRow("Beys used", p.beys ?? "–")}
         </div>
 
         <div class="stat-block">
