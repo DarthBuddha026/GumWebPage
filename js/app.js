@@ -16,6 +16,11 @@
     burst: { label: "Burst", long: "Burst finish", color: "var(--f-burst)" },
     extreme: { label: "Extreme", long: "Extreme finish", color: "var(--f-extreme)" },
   };
+  // Penalty rounds (not finishes): the opponent of the blader penalised gets the points.
+  const PENALTIES = {
+    warning: { label: "2 warnings", color: "var(--ash)" },
+    dq: { label: "Disqualified", color: "var(--pink)" },
+  };
 
   // Guild roles set in the admin (`guildRole` on each blader). Each guild has at most one
   // Guild Leader and one Battle Master; everyone else is a member and shows no role tag.
@@ -551,8 +556,10 @@
     const outcome = a > z ? "win" : a < z ? "loss" : "draw";
     const rounds = (b.rounds || [])
       .map((rd) => {
-        const info = FINISHES[rd.finish];
         const ours = rd.winner === mine;
+        const penalty = PENALTIES[rd.finish];
+        if (penalty) return `<span class="${ours ? "" : "theirs"}" style="--sw:${penalty.color}" title="${esc(`${ours ? them.name : me.name}: ${penalty.label.toLowerCase()}, the point${rd.finish === "warning" ? "" : "s"} go to ${ours ? me.name : them.name}`)}"></span>`;
+        const info = FINISHES[rd.finish];
         return `<span class="${ours ? "" : "theirs"}" style="--sw:${info ? info.color : "var(--ash)"}" title="${esc(`${ours ? me.name : them.name} won by ${info ? info.long.toLowerCase() : rd.finish}`)}"></span>`;
       })
       .join("");

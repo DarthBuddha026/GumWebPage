@@ -35,6 +35,9 @@ window.LEAGUE_CONFIG = {
   // Points awarded per finish type.
   finishPoints: { spin: 1, over: 2, burst: 2, extreme: 3 },
   pointsToWin: 4,
+  // Penalties: points to the opponent of the blader penalised (2 warnings, or a disqualification). A penalty is
+  // stored as a round won by the opponent with `finish` "warning" or "dq", and isn't a finish in the finish stats.
+  penaltyPoints: { warning: 1, dq: 4 },
 
   // A player must meet both to appear on leaderboards / be ranked.
   eligibilityAttendance: 0.5,
