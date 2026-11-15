@@ -1202,15 +1202,21 @@ a { color: inherit; }
 .sched-bounty .fa-crosshairs { color: var(--glow); }
 .sched-bounty .avatar { width: 26px; height: 26px; font-size: 0.6rem; }
 .sched-bounty b { color: var(--bone); }
-.sched-targets { margin-top: 12px; }
-.sched-targets ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
-.sched-targets li { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; padding: 6px 8px; border: 1px solid var(--line); border-radius: 6px; }
-.sched-targets .fa-crosshairs { color: var(--glow); font-size: var(--t-xs); }
-.sched-target-picks { display: flex; flex-wrap: wrap; gap: 4px; }
+.sched-board { gap: 10px; margin-top: 8px; padding: 10px 20px 10px 16px; font-size: var(--t-m); }
+.sched-targets th, .sched-targets td { padding-left: 4px; padding-right: 4px; }
+.sched-targets tbody tr { cursor: default; }
+.sched-targets td:first-child { border-right: 1px solid var(--line); }
+.sched-targets .fa-crosshairs { color: var(--glow); margin-right: 2px; }
 .sched-target { display: inline-flex; align-items: center; gap: 6px; padding: 2px 6px; border: 0; border-radius: 4px; background: none; color: var(--ash); font: inherit; font-size: var(--t-s); cursor: pointer; }
 .sched-target:hover, .sched-target:focus-visible { background: rgba(var(--bone-rgb), 0.08); }
 .sched-target b { color: var(--bone); }
 .sched-target .avatar { width: 22px; height: 22px; font-size: 0.55rem; }
+/* Phones: each guild's badge sits over its name, so four columns fit. */
+@media (max-width: 760px) {
+  .sched-targets .sched-target { flex-direction: column; gap: 3px; padding: 4px 2px; font-size: var(--t-xs); text-align: center; }
+  .sched-targets th { white-space: normal; }
+  .sched-targets th, .sched-targets td { text-align: center; }
+}
 .sched-desc { margin: 10px 0 0; font-size: var(--t-s); line-height: 1.5; white-space: pre-line; }
 /* Desktop: the calendar and the event panel keep one height whatever month or event is showing. The
    weeks share the calendar's height; long event details scroll under the poster. */

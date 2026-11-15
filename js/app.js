@@ -468,14 +468,18 @@
     // and the details uploaded in the admin.
     const kindName = (x) => (kind(x) === "siege" ? "Guild Siege" : kind(x) === "raid" ? "Grand Raid" : "EXP Farm Event");
     const shownEvent = w || upNext;
-    // Each guild's target guilds for a Guild Siege; every guild opens its profile.
+    // Each guild's target guilds for a Guild Siege, behind a button that opens them in a modal; every guild opens its profile.
     const targetButton = (name, main) => `<button type="button" class="sched-target" data-open-team="${esc(name)}">${teamAvatar(state.teamsByName.get(name) || { name })}${main ? `<b>${esc(name)}</b>` : `<span>${esc(name)}</span>`}</button>`;
     const targetList = (targets) => {
       const rows = Object.entries(targets || {});
       if (!rows.length) return "";
-      return `<div class="sched-targets"><p class="sched-kicker">Target guilds</p><ul>${rows
-        .map(([g, list]) => `<li>${targetButton(g, true)}<i class="fas fa-crosshairs" aria-hidden="true"></i><span class="sched-target-picks">${list.map((t) => targetButton(t)).join("")}</span></li>`)
-        .join("")}</ul></div>`;
+      const cols = Math.max(...rows.map(([, list]) => list.length));
+      $("#targets-list").innerHTML = `<table class="data-table sched-targets">
+        <thead><tr><th>Guild</th>${Array.from({ length: cols }, (_, i) => `<th><i class="fas fa-crosshairs" aria-hidden="true"></i> Target ${i + 1}</th>`).join("")}</tr></thead>
+        <tbody>${rows
+          .map(([g, list]) => `<tr><td>${targetButton(g, true)}</td>${Array.from({ length: cols }, (_, i) => `<td>${list[i] ? targetButton(list[i]) : `<span class="muted">–</span>`}</td>`).join("")}</tr>`)
+          .join("")}</tbody></table>`;
+      return `<button type="button" class="sched-bounty sched-board" data-action="open-targets"><i class="fas fa-crosshairs" aria-hidden="true"></i> <b>Target Board</b></button>`;
     };
     const eventPanel = (x) => `
       ${x.poster ? `<a class="sched-poster" href="${esc(x.poster)}" target="_blank" rel="noopener" data-title="${esc(x.label)}" aria-label="Open the ${esc(x.label)} poster"><img src="${esc(x.poster)}" alt="${esc(x.label)} poster"></a>` : ""}
@@ -1935,6 +1939,9 @@
           case "open-search": return openSearch();
           case "open-history": return openHistory();
           case "open-brackets": return openModal("brackets-modal");
+          case "open-targets": // takes the event's colour, like the poster
+            $("#targets-modal").style.setProperty("--glow", getComputedStyle(action).getPropertyValue("--glow"));
+            return openModal("targets-modal");
           case "share-profile": return shareProfile();
           case "share-guild": return shareGuild();
           case "toggle-theme": return toggleTheme();
@@ -2003,6 +2010,7 @@
       const team = e.target.closest("[data-open-team]");
       if (team) {
         e.preventDefault();
+        if (team.closest("#targets-modal")) closeModal("targets-modal");
         return openTeam(team.dataset.openTeam);
       }
     });
