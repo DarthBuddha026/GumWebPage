@@ -226,7 +226,8 @@
     const matches = season.matches.map((m) => {
       const r = results[m.id];
       const base = { id: m.id, weekId: m.weekId, week: weekLabel.get(m.weekId), bracket: bracketOf.get(m.team1) || "A", round: m.round, team1: m.team1, team2: m.team2, target: Boolean(m.target), bouts: [] };
-      if (r?.status === "final") base.bouts = r.bouts.map(({ p1, p2, p1Pts, p2Pts, rounds }) => ({ p1, p2, p1Pts, p2Pts, rounds }));
+      // Battles left unplayed once the match was decided keep their bladers in the admin but score nothing.
+      if (r?.status === "final") base.bouts = r.bouts.filter((b) => b.complete).map(({ p1, p2, p1Pts, p2Pts, rounds }) => ({ p1, p2, p1Pts, p2Pts, rounds }));
       if (r?.status === "default") base.defaultWinner = r.defaultWinner === 1 ? m.team1 : m.team2;
       return base;
     });
