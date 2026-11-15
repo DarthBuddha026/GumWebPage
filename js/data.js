@@ -108,8 +108,8 @@ window.LEAGUE_CONFIG = {
     { id: "pa2", name: "Fortress", exp: 10, icon: "fa-chess-rook", auto: "defense-streak", text: "Be deployed in three consecutive successful Guild defense legs during Guild Sieges." },
     { id: "pa3", name: "Full Deployment", exp: 5, icon: "fa-people-group", auto: "full-deployment", text: "Be part of a Guild whose entire official roster participates in all four Grand Raids." },
     { id: "pa4", name: "Perfect War", exp: 10, icon: "fa-crown", auto: "perfect-leg", text: "Be deployed in a Guild Siege attack or defense leg won without losing an individual matchup." },
-    { id: "pa5", name: "We Feast Tonight!", exp: 5, icon: "fa-drumstick-bite", auto: "first-encounter", text: "Be deployed in and complete the Guild's first official Guild Siege encounter." },
-    { id: "pa6", name: "Extreme Specialist", exp: 10, icon: "fa-bolt", text: "Score at least two Xtreme Finishes in one individual matchup during a Grand Raid." },
+    { id: "pa5", name: "We Feast Tonight!", exp: 5, icon: "fa-drumstick-bite", auto: "first-deployment", text: "Be deployed in your first official Guild Siege leg." },
+    { id: "pa6", name: "Extreme Specialist", exp: 10, icon: "fa-bolt", auto: "extreme-specialist", text: "Score at least two Xtreme Finishes in one individual matchup during a Guild Siege." },
     { id: "pa7", name: "Swiss King", exp: 5, icon: "fa-chess-king", auto: "swiss", text: "Become Swiss King or Queen at an EXP-accredited Weekly Pod or Grand Raid." },
     { id: "pa8", name: "The Strongest", exp: 5, icon: "fa-trophy", auto: "champion", text: "Become Champion at an EXP-accredited Weekly Pod or Grand Raid." },
     { id: "pa9", name: "King Slayer", exp: 5, icon: "fa-skull", auto: "leader", text: "Defeat an opposing Guild's registered Guild Leader for the first time during the Top Cut of a Weekly Pod or Grand Raid." },
@@ -220,26 +220,22 @@ window.LEAGUE_CONFIG = {
     return earned;
   };
 
-  // Deployed in the guild's first encounter (its first fixture and the return leg, same date and round) once every leg
-  // of it is scored. It follows the schedule, so scoring a later encounter first doesn't count as the first.
-  const firstEncounter = (exp, legs) => {
-    const earned = new Set();
-    new Set(legs.flatMap((leg) => [leg.attacker, leg.defender])).forEach((guild) => {
-      const first = legs.find((leg) => leg.attacker === guild || leg.defender === guild);
-      const other = first.attacker === guild ? first.defender : first.attacker;
-      const encounter = legs.filter((leg) => leg.week === first.week && leg.round === first.round && [leg.attacker, leg.defender].includes(guild) && [leg.attacker, leg.defender].includes(other));
-      if (!encounter.every((leg) => leg.winner)) return;
-      encounter.forEach((leg) => deployed(leg, leg.attacker === guild ? "attacker" : "defender").forEach((k) => earned.add(k)));
-    });
-    return earned;
-  };
+  // The blader's first deployment in a scored Guild Siege leg, whichever leg that is.
+  const firstDeployment = (exp, legs) =>
+    new Set(legs.filter((leg) => leg.winner).flatMap((leg) => [...deployed(leg, "attacker"), ...deployed(leg, "defender")]));
+
+  // Won at least two rounds by Xtreme Finish in one siege battle (penalty rounds aren't finishes).
+  const extremeSpecialist = (exp, legs) =>
+    new Set(legs.flatMap((leg) => (leg.bouts || []).flatMap((b) =>
+      [[1, b.p1], [2, b.p2]].filter(([side]) => (b.rounds || []).filter((r) => r.winner === side && r.finish === "extreme").length >= 2).map(([, k]) => k))));
 
   const AUTO_ACHIEVEMENTS = {
     "attack-streak": streak("attacker"),
     "defense-streak": streak("defender"),
     "full-deployment": fullDeployment,
     "perfect-leg": perfectLeg,
-    "first-encounter": firstEncounter,
+    "first-deployment": firstDeployment,
+    "extreme-specialist": extremeSpecialist,
     swiss: fromEvents((en) => en.swiss),
     champion: fromEvents((en) => en.champion),
     leader: fromEvents((en) => (en.defeated || []).some((d) => d.role === "leader")),

@@ -148,16 +148,16 @@ assert.deepStrictEqual(fromLegs([leg("w1", 1, "A", "B", "A", [["a1", "b1", true]
 assert.deepStrictEqual(fromLegs([leg("w1", 1, "A", "B", "A")]).pa4, []); // by default
 assert.deepStrictEqual(fromLegs([leg("w1", 1, "A", "B", null, [])]).pa4, []);
 
-// We Feast Tonight!: deployed in the guild's first encounter, once both its legs are scored, for both guilds.
-const out = leg("w1", 1, "A", "B", "A", [["a1", "b1", true]]);
-const back = leg("w1", 1, "B", "A", "B", [["b2", "a2", true]]);
-const later = leg("w2", 1, "A", "C", "A", [["a9", "c1", true]]);
-assert.deepStrictEqual(fromLegs([out, leg("w1", 1, "B", "A", null), later]).pa5, ["c1"]); // A and B's return leg isn't scored yet; C's first is complete
-assert.deepStrictEqual(sorted(fromLegs([out, back, later]).pa5), ["a1", "a2", "b1", "b2", "c1"]); // a9 played a later one; C's first is this
-// Scoring a later encounter first doesn't make it the guild's first.
-assert.deepStrictEqual(fromLegs([leg("w1", 1, "A", "B", null), leg("w1", 1, "B", "A", null), leg("w2", 1, "A", "C", "A", [["a9", "c1", true]])]).pa5, ["c1"]);
-// A guild's first encounter is the first on the schedule, whichever side it starts on, and a default still completes it.
-assert.deepStrictEqual(sorted(fromLegs([leg("w1", 1, "B", "A", "A"), leg("w1", 1, "A", "B", "A", [["a1", "b1", true]])]).pa5), ["a1", "b1"]);
+// We Feast Tonight!: the blader's first deployment in a scored siege leg, whichever leg it is, won or lost.
+assert.deepStrictEqual(sorted(fromLegs([leg("w1", 1, "A", "B", "A", [["a1", "b1", true]]), leg("w2", 3, "C", "A", "C", [["c1", "a9", true]])]).pa5), ["a1", "a9", "b1", "c1"]);
+assert.deepStrictEqual(fromLegs([leg("w1", 1, "A", "B", null), leg("w1", 1, "B", "A", "A")]).pa5, []); // not scored yet, or by default
+
+// Extreme Specialist: two rounds won by Xtreme Finish in one siege battle, by either blader.
+const xtreme = (rounds) => fromLegs([{ ...leg("w1", 1, "A", "B", "A"), bouts: [{ p1: "a1", p2: "b1", p1Pts: 6, p2Pts: 3, rounds }] }]).pa6;
+const X = (winner) => ({ winner, finish: "extreme" });
+assert.deepStrictEqual(xtreme([X(1), X(2), X(1)]), ["a1"]);
+assert.deepStrictEqual(sorted(xtreme([X(2), X(1), X(2), X(1)])), ["a1", "b1"]);
+assert.deepStrictEqual(xtreme([X(1), { winner: 1, finish: "dq" }]), []);
 // Bladers lined up for a battle left unplayed (the leg was already decided) count as deployed on the winning side only.
 const decided = { ...leg("w1", 1, "A", "B", "A", [["a1", "b1", true], ["a2", "b2", true]]), unplayed: [{ p1: "a3", p2: "b3" }] };
 assert.deepStrictEqual(sorted(fromLegs([decided]).pa4), ["a1", "a2", "a3"]);
