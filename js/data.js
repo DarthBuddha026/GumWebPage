@@ -97,7 +97,8 @@ window.LEAGUE_CONFIG = {
   ],
   // Player achievements (section 2.6). Each registered blader can earn each one once; the EXP goes to their guild.
   // Organizers tick them in the admin's Guild EXP tab, keyed by `id`, so keep ids stable when editing the text.
-  // One with `auto` isn't ticked: it comes from the recorded Weekly Pods, Grand Raids and siege scores (see earnedAchievements).
+  // One with `auto` also comes by itself from the recorded Weekly Pods, Grand Raids and siege scores (see earnedAchievements);
+  // organizers can still tick it for a blader the records don't cover.
   // `icon` is the Font Awesome icon on the blader profile achievement badge.
   playerAchievements: [
     { id: "pa1", name: "War Machine", exp: 10, icon: "fa-hammer", auto: "attack-streak", text: "Be deployed in three consecutive successful Guild attack legs during Guild Sieges." },
@@ -242,7 +243,9 @@ window.LEAGUE_CONFIG = {
     const earned = {};
     (cfg.playerAchievements || []).forEach((a) => {
       const work = AUTO_ACHIEVEMENTS[a.auto];
-      earned[a.id] = work ? [...work(exp, legs, players)] : exp.playerAchievements?.[a.id] || [];
+      // Earned automatically or ticked by an organizer (each blader counts once).
+      const ticked = exp.playerAchievements?.[a.id] || [];
+      earned[a.id] = work ? [...new Set([...work(exp, legs, players), ...ticked])] : ticked;
     });
     return earned;
   }

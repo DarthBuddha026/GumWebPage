@@ -63,17 +63,18 @@ const exp = {
     { id: "e1", type: "pod", entries: [{ player: "pa", entries: 1, champion: true, role: "member" }, { player: "pb", entries: 1 }] },
     { id: "e2", type: "raid", entries: [{ player: "pc", entries: 1, swiss: true }, { player: "gone", entries: 1 }] }, // removed blader: ignored
   ],
-  playerAchievements: { pa6: ["pa", "pc"], pa9: ["pb"], nope: ["pa"] }, // unknown ids and ticks on `auto` achievements are ignored
+  playerAchievements: { pa6: ["pa", "pc"], pa9: ["pb"], nope: ["pa"] }, // unknown ids are ignored; a tick on an `auto` achievement counts like any tick
   purchases: [{ guild: "A", amount: 1500 }, { guild: "B", amount: 600 }, { guild: "Gone", amount: 5000 }],
 };
 const all = guildExp(["A", "B"], [], exp, teams);
 // pa6 ticked for pa and pc (+10 each); The Strongest for pa and Swiss King for pc come from the events (+5 each).
 assert.deepStrictEqual(all.get("A").guild, { events: 12 + 24, achievements: 10 + 10 + 5 + 5, shop: 4 });
 assert.strictEqual(all.get("A").exp, 70);
-assert.deepStrictEqual(all.get("B").guild, { events: 2, achievements: 0, shop: 2 });
+// King Slayer ticked for pb by hand (+5), though no event earned it.
+assert.deepStrictEqual(all.get("B").guild, { events: 2, achievements: 5, shop: 2 });
 // Each blader's share: events and achievements, not the guild's shop receipts.
 assert.deepStrictEqual(all.get("A").members, { pa: 12 + 10 + 5, pc: 24 + 10 + 5 });
-assert.deepStrictEqual(all.get("B").members, { pb: 2 });
+assert.deepStrictEqual(all.get("B").members, { pb: 2 + 5 });
 
 // Achievements from events: each counts once however many events earn it, and only by the role recorded with the defeat.
 const earned = earnedAchievements({
@@ -84,9 +85,10 @@ const earned = earnedAchievements({
   playerAchievements: { pa6: ["t"], pa7: ["ticked"], pa9: ["ticked"] },
 }, [], [], cfg);
 assert.deepStrictEqual(earned.pa6, ["t"]);
-assert.deepStrictEqual(earned.pa7, ["a"]);
+// Ticks add to an auto achievement: earned from the events or ticked, once each.
+assert.deepStrictEqual(earned.pa7, ["a", "ticked"]);
 assert.deepStrictEqual(earned.pa8, ["a"]);
-assert.deepStrictEqual(earned.pa9, ["a"]);
+assert.deepStrictEqual(earned.pa9, ["a", "ticked"]);
 assert.deepStrictEqual(earned.pa10, ["b"]);
 assert.deepStrictEqual(earnedAchievements({}, [], [], cfg).pa7, []);
 
@@ -97,7 +99,8 @@ const roster = [
 ];
 const raid = (...keys) => ({ type: "raid", entries: keys.map((player) => ({ player })) });
 const raids = (n, ...keys) => Array.from({ length: n }, () => raid(...keys));
-const full = (events) => sorted(earnedAchievements({ events, playerAchievements: { pa3: ["ticked"] } }, [], roster, cfg).pa3);
+const full = (events) => sorted(earnedAchievements({ events }, [], roster, cfg).pa3);
+assert.deepStrictEqual(earnedAchievements({ playerAchievements: { pa7: ["a", "a"] }, events: [{ type: "pod", entries: [{ player: "a", swiss: true }] }] }, [], [], cfg).pa7, ["a"]);
 assert.deepStrictEqual(full(raids(4, "a1", "a2", "b1")), ["a1", "a2"]); // b2 missed them, so nobody in B has it; a3 is inactive
 assert.deepStrictEqual(full(raids(3, "a1", "a2", "b1", "b2")), []); // only three so far
 assert.deepStrictEqual(full([...raids(3, "a1", "a2"), raid("a1")]), []); // a2 missed one
@@ -108,7 +111,7 @@ const leg = (week, round, attacker, defender, winner, bouts = []) => ({
   week, round, attacker, defender, winner,
   bouts: bouts.map(([p1, p2, won]) => ({ p1, p2, p1Pts: won ? 4 : 1, p2Pts: won ? 1 : 4 })),
 });
-const fromLegs = (legs) => earnedAchievements({ playerAchievements: { pa1: ["ticked"], pa2: ["ticked"], pa4: ["ticked"], pa5: ["ticked"] } }, legs, [], cfg);
+const fromLegs = (legs) => earnedAchievements({}, legs, [], cfg);
 
 // War Machine: three of the guild's attack legs won in a row, deployed in each. Legs elsewhere don't interrupt.
 const three = [
