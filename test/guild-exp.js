@@ -158,6 +158,11 @@ assert.deepStrictEqual(sorted(fromLegs([out, back, later]).pa5), ["a1", "a2", "b
 assert.deepStrictEqual(fromLegs([leg("w1", 1, "A", "B", null), leg("w1", 1, "B", "A", null), leg("w2", 1, "A", "C", "A", [["a9", "c1", true]])]).pa5, ["c1"]);
 // A guild's first encounter is the first on the schedule, whichever side it starts on, and a default still completes it.
 assert.deepStrictEqual(sorted(fromLegs([leg("w1", 1, "B", "A", "A"), leg("w1", 1, "A", "B", "A", [["a1", "b1", true]])]).pa5), ["a1", "b1"]);
+// Bladers lined up for a battle left unplayed (the leg was already decided) count as deployed on the winning side only.
+const decided = { ...leg("w1", 1, "A", "B", "A", [["a1", "b1", true], ["a2", "b2", true]]), unplayed: [{ p1: "a3", p2: "b3" }] };
+assert.deepStrictEqual(sorted(fromLegs([decided]).pa4), ["a1", "a2", "a3"]);
+assert.deepStrictEqual(sorted(fromLegs([decided, { ...leg("w1", 1, "B", "A", "B", [["b1", "a1", true]]), unplayed: [{ p1: "b4", p2: "a4" }] }]).pa5), ["a1", "a2", "a3", "b1", "b2", "b4"]); // b3 and a4 were lined up on the losing side
+assert.deepStrictEqual(fromLegs([{ ...three[0], unplayed: [{ p1: "a3", p2: "b3" }] }, three[2], three[3]]).pa1, ["a1"]); // a3 now has three
 // Unscored legs pay no Skill EXP.
 assert.strictEqual(guildExp(["A", "B"], [leg("w1", 1, "A", "B", null)], {}, teams).get("A").skillExp, 0);
 

@@ -176,7 +176,10 @@ window.LEAGUE_CONFIG = {
   // legs: every Guild Siege fixture in play order, played or not: { week, round, attacker, defender, winner, bouts }.
   // `winner` is null until a leg is scored, and a leg won by default has no bouts, so nobody was deployed in it.
   const fromEvents = (test) => (exp) => new Set((exp.events || []).flatMap((ev) => ev.entries.filter(test).map((en) => en.player)));
-  const deployed = (leg, side) => (leg.bouts || []).map((b) => (side === "attacker" ? b.p1 : b.p2)).filter(Boolean);
+  // `unplayed`: battles lined up but not played because the leg was already decided ({ p1, p2 }); their bladers count as
+  // deployed only on the side that won the leg.
+  const deployed = (leg, side) =>
+    [...(leg.bouts || []), ...(leg.winner === leg[side] ? leg.unplayed || [] : [])].map((b) => (side === "attacker" ? b.p1 : b.p2)).filter(Boolean);
 
   // Won three legs in a row on this side, counting only the legs the blader was deployed in: losing one restarts their
   // run, sitting one out doesn't. A guild leg not scored yet restarts everyone's, since it could still be a loss.

@@ -227,7 +227,11 @@
       const r = results[m.id];
       const base = { id: m.id, weekId: m.weekId, week: weekLabel.get(m.weekId), bracket: bracketOf.get(m.team1) || "A", round: m.round, team1: m.team1, team2: m.team2, target: Boolean(m.target), bouts: [] };
       // Battles left unplayed once the match was decided keep their bladers in the admin but score nothing.
-      if (r?.status === "final") base.bouts = r.bouts.filter((b) => b.complete).map(({ p1, p2, p1Pts, p2Pts, rounds }) => ({ p1, p2, p1Pts, p2Pts, rounds }));
+      // Their bladers still count for the winning side's achievements (`unplayed`).
+      if (r?.status === "final") {
+        base.bouts = r.bouts.filter((b) => b.complete).map(({ p1, p2, p1Pts, p2Pts, rounds }) => ({ p1, p2, p1Pts, p2Pts, rounds }));
+        base.unplayed = r.bouts.filter((b) => b.unplayed).map(({ p1, p2 }) => ({ p1, p2 }));
+      }
       if (r?.status === "default") base.defaultWinner = r.defaultWinner === 1 ? m.team1 : m.team2;
       return base;
     });
@@ -290,7 +294,7 @@
     const sieges = raw.matches
       .map((m, i) => ({ m, i }))
       .sort((a, b) => (weekOrder.get(a.m.weekId) ?? 1e9) - (weekOrder.get(b.m.weekId) ?? 1e9) || (a.m.round || 0) - (b.m.round || 0) || a.i - b.i)
-      .map(({ m }) => ({ week: m.weekId, round: m.round, winner: m.result?.winner || null, loser: m.result ? (m.result.winner === m.team1 ? m.team2 : m.team1) : null, attacker: m.team1, defender: m.team2, target: m.target, bouts: m.bouts, match: m }));
+      .map(({ m }) => ({ week: m.weekId, round: m.round, winner: m.result?.winner || null, loser: m.result ? (m.result.winner === m.team1 ? m.team2 : m.team1) : null, attacker: m.team1, defender: m.team2, target: m.target, bouts: m.bouts, unplayed: m.unplayed, match: m }));
     const exp = window.leagueTools.guildExp(teams.map((t) => t.name), sieges, raw.exp || {}, new Map(players.map((p) => [p.key, p.team])), players);
     teams.forEach((t) => (t.xp = exp.get(t.name)));
     players.forEach((p) => (p.xp = exp.get(p.team)?.members[p.key] || 0));
