@@ -441,6 +441,8 @@ window.LEAGUE_CONFIG = {
           p.appearances.add(m.id);
         });
       });
+      // Lined up for a battle left unplayed (the match was already decided): counts as attendance, but no stats.
+      (m.unplayed || []).forEach((b) => [b.p1, b.p2].forEach((k) => playersByKey.get(k)?.appearances.add(m.id)));
 
       const winner1 = b1 > b2 || (b1 === b2 && pts1 >= pts2);
       m.result = { bouts1: b1, bouts2: b2, pts1, pts2, winner: winner1 ? m.team1 : m.team2 };

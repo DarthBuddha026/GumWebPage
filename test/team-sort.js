@@ -40,4 +40,12 @@ assert.deepStrictEqual([ann.overall.games, ann.overall.extreme, ann.overall.spin
 assert.strictEqual(st.league.length, 0); // under minGames
 assert.strictEqual(st.players[1].overall.spin, 1);
 
+// An unplayed battle (match already decided) counts as attendance for both bladers, but adds no games.
+const st2 = window.leagueTools.leagueStats(
+  [{ name: "A" }, { name: "B" }],
+  [{ key: "a", name: "Ann", team: "A" }, { key: "b", name: "Bo", team: "B" }, { key: "c", name: "Cy", team: "A" }, { key: "d", name: "Di", team: "B" }],
+  [{ id: "m1", team1: "A", team2: "B", bouts: [bout("a", "b", 4, 1, [{ winner: 1, finish: "dq" }])], unplayed: [{ p1: "c", p2: "d" }] }]
+);
+assert.deepStrictEqual(["c", "d"].map((k) => [st2.playersByKey.get(k).attendance, st2.playersByKey.get(k).overall.games]), [[1, 0], [1, 0]]);
+
 console.log("team-sort ok");
