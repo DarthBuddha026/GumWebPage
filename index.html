@@ -11,7 +11,7 @@
   <meta name="description" content="GUM Guild Wars Season 2: live guild standings, MVP rankings, the match schedule and battle stats.">
 
   <!-- Link previews (Facebook, Messenger, WhatsApp, Discord, X, LinkedIn, iMessage, email). Crawlers need absolute URLs.
-       /Schedules serves this same file; middleware.js swaps in its own og:url there, so keep this line exactly as is. -->
+       /Schedules and /Handbook serve this same file; middleware.js swaps in their own og:url there, so keep this line exactly as is. -->
   <meta property="og:type" content="website">
   <meta property="og:site_name" content="GUM Guild Wars">
   <meta property="og:url" content="https://gumverse.gg/">
@@ -66,6 +66,7 @@
       <button class="nav-link" data-action="open-search"><i class="fas fa-magnifying-glass" aria-hidden="true"></i> Search</button>
       <button class="nav-link" data-action="open-history"><i class="fas fa-scroll" aria-hidden="true"></i> Battle log</button>
       <a class="nav-link" href="/Schedules" data-route data-page-link="schedule"><i class="fa-regular fa-calendar" aria-hidden="true"></i> Schedules</a>
+      <a class="nav-link" href="/Handbook" data-route data-page-link="handbook"><i class="fas fa-book" aria-hidden="true"></i> Handbook</a>
       <button class="nav-link hidden" data-action="open-brackets"><i class="fas fa-sitemap" aria-hidden="true"></i> Brackets</button>
       <a class="nav-link" id="nav-social" href="#" target="_blank" rel="noopener"><i class="fab fa-facebook" aria-hidden="true"></i> Facebook</a>
     </nav>
@@ -170,6 +171,22 @@
         <span class="crumb-current" aria-current="page">Schedules</span>
       </nav>
       <div id="schedule-list" class="schedule-cal"><span class="skel skel-line" style="width:40%"></span><div class="skel skel-block" style="height:320px;margin-top:16px"></div></div>
+    </section>
+  </main>
+
+  <!-- Handbook page, shown instead of the dashboard at /Handbook -->
+  <main id="handbook-page" class="dashboard schedule-page hidden" aria-label="Handbook">
+    <section class="section">
+      <nav class="breadcrumb" aria-label="Breadcrumb">
+        <a href="/" class="back-link" data-route><i class="fas fa-arrow-left" aria-hidden="true"></i> Back to Dashboard</a>
+        <span class="crumb-sep" aria-hidden="true">/</span>
+        <span class="crumb-current" aria-current="page">Handbook</span>
+      </nav>
+      <div class="section-head">
+        <h2 class="section-title">Handbook</h2>
+        <p class="section-note">How battles are scored, who gets ranked, and how guilds earn EXP and unlock skills.</p>
+      </div>
+      <div id="handbook-body"><div class="skel skel-block" style="height:320px"></div></div>
     </section>
   </main>
 

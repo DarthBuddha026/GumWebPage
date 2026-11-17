@@ -933,6 +933,109 @@
     }, 150);
   }
 
+  // The handbook at /Handbook, built from the same values the scoring uses (data.js), so it always matches.
+  function renderHandbook() {
+    const E = CFG.eventExp;
+    const S = CFG.siegeSkillExp;
+    const fmt = (n) => (Number(n) || 0).toLocaleString();
+    const signed = (n) => (n > 0 ? `+${n}` : `−${-n}`);
+    // Rows are [label html, number].
+    const table = (head, rows) => `<div class="table-wrap"><table class="data-table hb-table"><thead><tr><th>${esc(head[0])}</th><th class="num">${esc(head[1])}</th></tr></thead>
+      <tbody>${rows.map(([label, n]) => `<tr><td>${label}</td><td class="num strong">${esc(n)}</td></tr>`).join("")}</tbody></table></div>`;
+    const panel = (title, body) => `<div class="panel"><h4 class="panel-title">${esc(title)}</h4>${body}</div>`;
+    const list = (items) => `<ul class="hb-list">${items.map((t) => `<li>${t}</li>`).join("")}</ul>`;
+    const named = (name, text) => `<b>${esc(name)}</b>${text ? `<span class="hb-sub">${esc(text)}</span>` : ""}`;
+
+    const battles = panel(
+      "Scoring a battle",
+      table(["Finish", "Points"], Object.entries(CFG.finishPoints).map(([f, n]) => [esc(FINISHES[f]?.long || f), n])) +
+        list([
+          `The first blader to <b>${CFG.pointsToWin} points</b> wins the battle.`,
+          `2 warnings give the opponent <b>${CFG.penaltyPoints.warning} point</b>; a disqualification gives them <b>${CFG.penaltyPoints.dq} points</b>.`,
+        ])
+    );
+    const rankings = panel(
+      "Rankings",
+      list([
+        `To be ranked, a blader needs <b>${CFG.minGames} games</b> and to play in at least <b>${pct(CFG.eligibilityAttendance)}</b> of their guild's matches.`,
+        "Bladers are ordered by MVP score, then win rate, then point difference.",
+        "Guilds are ordered by match wins, then battle wins, then point difference, then points scored, then the strength of the guilds they played (Median-Buchholz), then battle wins against the other guilds still tied.",
+        "A match won by forfeit counts as a win, but adds no battles or points.",
+      ])
+    );
+    const events = panel(
+      "Guild EXP from Weekly Pods and Grand Raids",
+      table(["Result", "Guild EXP"], [
+        ["Single entry", E.single],
+        ["Double entry", E.double],
+        ["Swiss King or Queen", E.swiss],
+        ["Champion", E.champion],
+        ["Champion who is a Guild Leader", `+${E.championLeader}`],
+        ["Champion who is a Battle Master", `+${E.championBattleMaster}`],
+        ["Each opposing Guild Leader beaten in the Top Cut", E.bountyLeader],
+        ["Each opposing Battle Master beaten in the Top Cut", E.bountyBattleMaster],
+        ["Each Bounty Guild member beaten in the Final Stage", `+${E.bountyGuild}`],
+      ]) +
+        list(
+          [
+            `Grand Raids pay <b>×${E.raidMultiplier}</b>.`,
+            "EXP goes to the blader's guild, and never goes down.",
+            state.expCap ? `A guild needs <b>${fmt(state.expCap)} Guild EXP</b> this season.` : "",
+          ].filter(Boolean)
+        )
+    );
+    const shop = panel(
+      "Guild EXP from shop receipts",
+      table(["Receipt", "Guild EXP"], CFG.shopExp.map((t, i, all) => [i ? `₱${fmt(t.min)}–₱${fmt(all[i - 1].min - 1)}` : `₱${fmt(t.min)} or more`, t.exp])) +
+        list(["Shop EXP belongs to the guild as a whole, not to one blader."])
+    );
+    const siege = panel(
+      "Guild Skill EXP from Guild Sieges",
+      table(["Siege result", "Skill EXP"], [
+        ["Attack win", signed(S.attackWin)],
+        ["Successful Target (an attack win on a target guild)", signed(S.successfulTarget)],
+        ["Defend win", signed(S.defendWin)],
+        ["Attack loss", signed(S.attackLoss)],
+        ["Defend loss", signed(S.defendLoss)],
+      ]) +
+        list([
+          `Skill EXP stays between <b>0 and ${CFG.skillExpMax}</b>, and can go down.`,
+          "Deployment fee: <b>₱150</b>.",
+          "A minimum of <b>five</b> declared players.",
+        ])
+    );
+    const cap = state.expCap ? fmt(state.expCap) : "1,000";
+    const max = fmt(CFG.skillExpMax);
+    const surplus = panel(
+      "Surplus Guild EXP",
+      `<p class="hb-text">A guild may keep earning Guild EXP after reaching the required ${cap} EXP. Any Guild EXP earned beyond ${cap} becomes <b>Surplus Guild EXP</b>.</p>
+      <p class="hb-kicker">Automatic transfer</p>
+      <p class="hb-text">Surplus Guild EXP is automatically converted into Guild Skill EXP once both conditions are met:</p>` +
+        list([`The guild has earned and locked ${cap} Guild EXP.`, "The guild has recorded valid attendance on all four Guild Siege dates."]) +
+        list([
+          "<b>One Surplus Guild EXP equals one Guild Skill EXP.</b>",
+          `It is applied automatically until the Guild Skill EXP track reaches its maximum of ${max} EXP.`,
+          "The Guild Leader does not distribute or allocate Surplus Guild EXP.",
+          `Any Surplus Guild EXP left after the guild reaches ${max} Guild Skill EXP stays recorded, but unlocks no further guild skill.`,
+          "Surplus Guild EXP does not replace the requirement to take part in all four Guild Siege dates.",
+        ])
+    );
+    const skills = panel(
+      "Guild skills",
+      (state.expSkills.length ? table(["Skill", "Skill EXP needed"], state.expSkills.map((s) => [named(s.name, s.description), fmt(s.exp)])) : "") +
+        `<p class="hb-kicker">Unlocking and relocking</p>
+        <p class="hb-text">A guild skill stays available only while the guild's current Skill EXP meets its required threshold.</p>
+        <p class="hb-text">If a deduction drops the guild below a skill's threshold, that skill is locked straight away. It unlocks again automatically once the threshold is reached.</p>`
+    );
+    const achievements = panel("Player achievements", table(["Achievement", "Guild EXP"], CFG.playerAchievements.map((a) => [named(a.name, a.text), a.exp])));
+    const quests = panel(
+      "Guild Quests",
+      `<ol class="hb-list hb-quests">${CFG.guildQuests.map((q) => `<li><i class="fas ${esc(q.icon)}" aria-hidden="true"></i><span>${named(`${q.numeral}. ${q.name}`, q.text)}</span></li>`).join("")}</ol>`
+    );
+
+    $("#handbook-body").innerHTML = `<div class="hb-grid">${battles}${rankings}${events}${shop}${siege}${surplus}${skills}${achievements}${quests}</div>`;
+  }
+
   function renderDashboard() {
     renderSchedule();
     renderHero();
@@ -942,6 +1045,7 @@
     renderFinishTables();
     renderRanking();
     renderMap();
+    renderHandbook(); // last, so the dashboard is still drawn if a handbook value is missing
   }
 
   // ---------------------------------------------------------------------------
@@ -1022,21 +1126,23 @@
     transition.finished.finally(() => line.remove());
   }
 
-  // Pages: the dashboard at /, or the schedule at /Schedules (vercel.json serves index.html there).
+  // Pages: the dashboard at /, the schedule at /Schedules or the handbook at /Handbook (vercel.json serves index.html there).
   // Only switching pages scrolls to the top, so in-page "#" links (like the map popups') don't jump.
   // Switching slides the pages sideways (a View Transition, styled by data-slide in the CSS); the
   // first load, reduced motion and browsers without View Transitions just swap.
   function route() {
     // Old #schedule links still land on the schedule.
     if (location.hash === "#schedule") history.replaceState(null, "", "/Schedules");
-    const page = /^\/schedules\/?$/i.test(location.pathname) ? "schedule" : "dashboard";
+    const page = /^\/schedules\/?$/i.test(location.pathname) ? "schedule" : /^\/handbook\/?$/i.test(location.pathname) ? "handbook" : "dashboard";
     $$("[data-page-link]").forEach((a) => a.classList.toggle("active", a.dataset.pageLink === page));
     if (page === state.page) return;
     const first = !state.page;
+    const order = ["dashboard", "schedule", "handbook"]; // the nav's order: a page further right slides in from the right
+    const forward = order.indexOf(page) > order.indexOf(state.page);
     state.page = page;
     if (first || !document.startViewTransition || matchMedia("(prefers-reduced-motion: reduce)").matches) return showPage(page);
     const root = document.documentElement;
-    root.dataset.slide = page === "schedule" ? "forward" : "back";
+    root.dataset.slide = forward ? "forward" : "back";
     document.startViewTransition(() => showPage(page)).finished.finally(() => delete root.dataset.slide);
   }
 
@@ -1044,6 +1150,7 @@
     closeMobileMenu();
     $("#dashboard").classList.toggle("hidden", page !== "dashboard");
     $("#schedule-page").classList.toggle("hidden", page !== "schedule");
+    $("#handbook-page").classList.toggle("hidden", page !== "handbook");
     window.scrollTo({ top: 0, behavior: "instant" });
     // The map can't measure itself while hidden, so redraw it once the dashboard is back.
     if (page === "dashboard" && state.map) renderMap();

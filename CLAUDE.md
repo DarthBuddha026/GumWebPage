@@ -41,6 +41,9 @@ The scoring follows the GGW2 handbook, and its values live in `data.js` (`eventE
 ### Schedules page
 A scrolling page (`renderSchedule()`): the calendar and the Upcoming Event panel side by side, and the Guild Siege match-ups below. A Weekly Pod or Grand Raid with a Bounty Guild drawn in the admin (`bountyGuild` on the season week) shows it in the event panel, opening that guild. A Guild Siege week's `targets` (each guild's up to 3 target guilds, set in the admin's week editor) open from a Target Board button there, in `#targets-modal` (`targetList()`). The event panel shows the day picked on the calendar (any kind, Guild Sieges included; clicking it again clears it), or else the next pod, Grand Raid or Guild Siege, with its poster (opens full size) and details. Posters, start time, entry fee, link and description are set per week in the admin's Schedule tab; posters are admin `/api/image` paths rewritten by `fromAdmin()` like logos.
 
+### Handbook page
+`/Handbook` (`renderHandbook()`, the last step of `renderDashboard()`) explains scoring, ranking, Guild EXP, Skill EXP, achievements and quests. It is built from the same `data.js` values (and the season's guild skills) the scoring uses, so change the numbers there, not on the page. Like `/Schedules`, it has a `vercel.json` rewrite and its own og:url in `middleware.js`.
+
 ### Domain rules (in app.js)
 - The finish types are `spin` (shown as "Stamina"), `over`, `burst` and `extreme`. The `FINISHES` map at the top of app.js and the `--f-*` CSS variables must stay in sync with `CFG.finishPoints`.
 - To be ranked, a player needs `minGames` games **and** attendance of at least `eligibilityAttendance` of their guild's matches.

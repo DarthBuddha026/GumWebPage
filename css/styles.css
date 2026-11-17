@@ -1181,6 +1181,21 @@ a { color: inherit; }
 .schedule-cal { --k-siege: var(--pink); --k-raid: var(--teal); --k-event: var(--f-extreme); --k-holiday: var(--f-over); }
 /* The schedule page (/Schedules) */
 .schedule-page .section { padding-top: 40px; }
+/* Handbook */
+.hb-grid { display: grid; gap: 24px; }
+#handbook-page .table-wrap { max-height: none; overflow: visible; margin-right: 0; padding-right: 0; }
+.hb-table tbody tr { cursor: default; }
+.hb-table tbody tr:hover { background: none; }
+.hb-table td { vertical-align: top; }
+.hb-sub { display: block; margin-top: 2px; color: var(--ash); font-size: var(--t-xs); }
+.hb-list { margin: 12px 0 0; padding-left: 18px; color: var(--ash); font-size: var(--t-s); line-height: 1.55; }
+.hb-list b, .hb-text b { color: var(--bone); }
+.hb-text { margin: 0 0 12px; color: var(--ash); font-size: var(--t-s); line-height: 1.55; }
+.hb-kicker { margin: 18px 0 6px; color: var(--f-extreme); font-size: var(--t-s); font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; }
+.hb-text:last-child { margin-bottom: 0; }
+.hb-quests { list-style: none; padding: 0; display: grid; gap: 12px; }
+.hb-quests li { display: flex; gap: 12px; align-items: flex-start; }
+.hb-quests .fas { width: 20px; margin-top: 3px; color: var(--glow); text-align: center; }
 /* The calendar and the upcoming event side by side, and the next (or picked) Guild Siege under both.
    The page scrolls; phones stack the panels in the same order. */
 .sched-layout { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); grid-template-areas: "cal pod" "siege siege"; gap: 24px; }
