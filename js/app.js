@@ -963,6 +963,33 @@
         "A match won by forfeit counts as a win, but adds no battles or points.",
       ])
     );
+    // The weights mirror mvpScore() in data.js; change both together.
+    const mvp = panel(
+      "How the MVP score works",
+      `<p class="hb-text">Every blader gets an MVP score from their battles this season. It adds up five things you do in the arena. The bigger the total, the higher you rank.</p>` +
+        table(["What counts", "Worth"], [
+          [named("Winning", "Your share of battles won. Everyone starts as if they had 1 extra win and 1 extra loss, so a lucky 2–0 start can't beat a long winning run."), "× 6"],
+          [named("Scoring", "The points you score in an average battle."), "× 1"],
+          [named("Xtreme Finishes", "The Xtreme Finishes you land in an average battle."), "× 1.5"],
+          [named("Defence", `${CFG.pointsToWin} minus the points you give away in an average battle (never below 0).`), "× 0.5"],
+          [named("Showing up", "How many of your guild's matches you played in: all of them counts as 1, half of them as 0.5."), "× 2"],
+        ]) +
+        `<p class="hb-kicker">Example</p>
+        <p class="hb-text">A blader plays <b>10 battles</b>: wins 8, scores 36 points, gives away 14, lands 3 Xtreme Finishes, and plays in 9 of their guild's 10 matches.</p>` +
+        list([
+          "Winning: (8 + 1) ÷ (10 + 2) = 0.75, × 6 = <b>4.50</b>",
+          "Scoring: 36 ÷ 10 = 3.6, × 1 = <b>3.60</b>",
+          "Xtreme Finishes: 3 ÷ 10 = 0.3, × 1.5 = <b>0.45</b>",
+          `Defence: ${CFG.pointsToWin} − (14 ÷ 10) = 2.6, × 0.5 = <b>1.30</b>`,
+          "Showing up: 9 ÷ 10 = 0.9, × 2 = <b>1.80</b>",
+          "MVP score: 4.50 + 3.60 + 0.45 + 1.30 + 1.80 = <b>11.65</b>",
+        ]) +
+        list([
+          "Winning counts the most, so win battles first.",
+          "Weekly MVP uses only that week's battles, and counts everyone who played as having shown up.",
+          "If two bladers have the same score, the one with the better win rate ranks higher, then the one with the bigger point difference.",
+        ])
+    );
     const events = panel(
       "Guild EXP from Weekly Pods and Grand Raids",
       table(["Result", "Guild EXP"], [
@@ -1033,7 +1060,7 @@
       `<ol class="hb-list hb-quests">${CFG.guildQuests.map((q) => `<li><i class="fas ${esc(q.icon)}" aria-hidden="true"></i><span>${named(`${q.numeral}. ${q.name}`, q.text)}</span></li>`).join("")}</ol>`
     );
 
-    $("#handbook-body").innerHTML = `<div class="hb-grid">${battles}${rankings}${events}${shop}${siege}${surplus}${skills}${achievements}${quests}</div>`;
+    $("#handbook-body").innerHTML = `<div class="hb-grid">${battles}${rankings}${mvp}${events}${shop}${siege}${surplus}${skills}${achievements}${quests}</div>`;
   }
 
   function renderDashboard() {
