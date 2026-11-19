@@ -55,11 +55,13 @@ assert.strictEqual(entryExp({ entries: 1, champion: true, role: "member", bounty
 assert.strictEqual(entryExp({ entries: 1, champion: true, role: "leader", bounty: true }, "raid", cfg), 4 + 20 + 20 + 100);
 assert.strictEqual(entryExp({ entries: 1, bounty: true }, "pod", cfg), 2);
 
-// ----- Shop support tiers -----
+// ----- Shop support: 2 per full ₱500 on one receipt -----
 assert.strictEqual(purchaseExp(499, cfg), 0);
 assert.strictEqual(purchaseExp(500, cfg), 2);
 assert.strictEqual(purchaseExp(999, cfg), 2);
 assert.strictEqual(purchaseExp(1000, cfg), 4);
+assert.strictEqual(purchaseExp(1499, cfg), 4);
+assert.strictEqual(purchaseExp(2500, cfg), 10);
 
 // ----- Everything together -----
 const exp = {
@@ -72,8 +74,8 @@ const exp = {
 };
 const all = guildExp(["A", "B"], [], exp, teams);
 // pa6 ticked for pa and pc (+10 each); The Strongest for pa and Swiss King for pc come from the events (+5 each).
-assert.deepStrictEqual(all.get("A").guild, { events: 12 + 24, achievements: 10 + 10 + 5 + 5, shop: 4 });
-assert.strictEqual(all.get("A").exp, 70);
+assert.deepStrictEqual(all.get("A").guild, { events: 12 + 24, achievements: 10 + 10 + 5 + 5, shop: 6 }); // ₱1,500 = 3 × ₱500
+assert.strictEqual(all.get("A").exp, 72);
 // King Slayer ticked for pb by hand (+5), though no event earned it.
 assert.deepStrictEqual(all.get("B").guild, { events: 2, achievements: 5, shop: 2 });
 // Each blader's share: events and achievements, not the guild's shop receipts.
@@ -191,7 +193,7 @@ assert.deepStrictEqual(window.leagueTools.entryExpParts({ entries: 1, champion: 
 const logAll = all.get("A").log;
 assert.strictEqual(logAll.reduce((n, l) => n + l.n, 0), all.get("A").exp);
 assert.deepStrictEqual(logAll.filter((l) => l.kind === "event").map((l) => [l.player, l.n, l.parts.reduce((n, p) => n + p.n, 0)]), [["pa", 12, 12], ["pc", 24, 24]]);
-assert.deepStrictEqual(logAll.filter((l) => l.kind === "shop").map((l) => [l.player, l.n]), [[undefined, 4]]);
+assert.deepStrictEqual(logAll.filter((l) => l.kind === "shop").map((l) => [l.player, l.n]), [[undefined, 6]]);
 assert.strictEqual(logAll.filter((l) => l.kind === "achievement").length, 4);
 
 console.log("guildExp ok");

@@ -939,9 +939,9 @@
     const S = CFG.siegeSkillExp;
     const fmt = (n) => (Number(n) || 0).toLocaleString();
     const signed = (n) => (n > 0 ? `+${n}` : `−${-n}`);
-    // Rows are [label html, number].
-    const table = (head, rows) => `<div class="table-wrap"><table class="data-table hb-table"><thead><tr><th>${esc(head[0])}</th><th class="num">${esc(head[1])}</th></tr></thead>
-      <tbody>${rows.map(([label, n]) => `<tr><td>${label}</td><td class="num strong">${esc(n)}</td></tr>`).join("")}</tbody></table></div>`;
+    // Rows are [label html, number, ...more numbers], one per numeric column.
+    const table = (head, rows) => `<div class="table-wrap"><table class="data-table hb-table"><thead><tr><th>${esc(head[0])}</th>${head.slice(1).map((h) => `<th class="num">${esc(h)}</th>`).join("")}</tr></thead>
+      <tbody>${rows.map(([label, ...ns]) => `<tr><td>${label}</td>${ns.map((n) => `<td class="num strong">${esc(n)}</td>`).join("")}</tr>`).join("")}</tbody></table></div>`;
     const panel = (title, body) => `<div class="panel"><h4 class="panel-title">${esc(title)}</h4>${body}</div>`;
     const list = (items) => `<ul class="hb-list">${items.map((t) => `<li>${t}</li>`).join("")}</ul>`;
     const named = (name, text) => `<b>${esc(name)}</b>${text ? `<span class="hb-sub">${esc(text)}</span>` : ""}`;
@@ -992,21 +992,21 @@
     );
     const events = panel(
       "Guild EXP from Weekly Pods and Grand Raids",
-      table(["Result", "Guild EXP"], [
+      // [label, Weekly Pod EXP, Grand Raid EXP]; an extra (on top of another line) shows with a +.
+      table(["Result", "Weekly Pod", "Grand Raid"], [
         ["Single entry", E.single],
         ["Double entry", E.double],
         ["Swiss King or Queen", E.swiss],
         ["Champion", E.champion],
-        ["Champion who is a Guild Leader", `+${E.championLeader}`],
-        ["Champion who is a Battle Master", `+${E.championBattleMaster}`],
-        ["Champion from the Bounty Guild", `+${E.championBounty}`],
+        ["Champion who is a Guild Leader", E.championLeader, true],
+        ["Champion who is a Battle Master", E.championBattleMaster, true],
+        ["Champion from the Bounty Guild", E.championBounty, true],
         ["Each opposing Guild Leader beaten in the Top Cut", E.bountyLeader],
         ["Each opposing Battle Master beaten in the Top Cut", E.bountyBattleMaster],
-        ["Each Bounty Guild member beaten in the Final Stage", `+${E.bountyGuild}`],
-      ]) +
+        ["Each Bounty Guild member beaten in the Final Stage", E.bountyGuild, true],
+      ].map(([label, n, extra]) => [label, ...[n, n * E.raidMultiplier].map((v) => (extra ? `+${v}` : v))])) +
         list(
           [
-            `Grand Raids pay <b>×${E.raidMultiplier}</b>.`,
             "EXP goes to the blader's guild, and never goes down.",
             state.expCap ? `A guild needs <b>${fmt(state.expCap)} Guild EXP</b> this season.` : "",
           ].filter(Boolean)
@@ -1014,8 +1014,12 @@
     );
     const shop = panel(
       "Guild EXP from shop receipts",
-      table(["Receipt", "Guild EXP"], CFG.shopExp.map((t, i, all) => [i ? `₱${fmt(t.min)}–₱${fmt(all[i - 1].min - 1)}` : `₱${fmt(t.min)} or more`, t.exp])) +
-        list(["Shop EXP belongs to the guild as a whole, not to one blader."])
+      table(["Receipt", "Guild EXP"], [1, 2, 3, 5].map((k) => [`₱${fmt(k * CFG.shopExp.every)}`, k * CFG.shopExp.exp])) +
+        list([
+          `Every <b>₱${fmt(CFG.shopExp.every)}</b> on one receipt earns <b>${CFG.shopExp.exp} Guild EXP</b>. Anything left over under ₱${fmt(CFG.shopExp.every)} earns nothing.`,
+          `Receipts are never added together: two ₱${fmt(CFG.shopExp.every / 2)} receipts earn nothing.`,
+          "Shop EXP belongs to the guild as a whole, not to one blader.",
+        ])
     );
     const siege = panel(
       "Guild Skill EXP from Guild Sieges",
@@ -1882,7 +1886,7 @@
         );
       guildParts.push(`
         <h6>Shop support <span class="exp-total">${expFmt(x.guild.shop)} <small>Guild EXP</small></span></h6>
-        <p class="exp-rule">Per approved receipt: ${CFG.shopExp.map((tier) => `${peso(tier.min)} or more ${expFmt(tier.exp)}`).join(", ")}.</p>
+        <p class="exp-rule">${expFmt(CFG.shopExp.exp)} for every ${peso(CFG.shopExp.every)} on one approved receipt.</p>
         <ul class="exp-lines">${lines.join("") || empty("No shop receipts yet.")}</ul>`);
     }
     const quests = CFG.guildQuests || [];

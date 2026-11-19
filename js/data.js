@@ -94,11 +94,9 @@ window.LEAGUE_CONFIG = {
     bountyGuild: 10, // per member of the Bounty Guild (Weekly Pods and Grand Raids) defeated in the Final Stage; stacks with the two above
     raidMultiplier: 2,
   },
-  // Shop support, per approved receipt: the highest tier the qualifying amount reaches.
-  shopExp: [
-    { min: 1000, exp: 4 },
-    { min: 500, exp: 2 },
-  ],
+  // Shop support: `exp` Guild EXP for every full `every` pesos of qualifying products on one approved receipt.
+  // Receipts are never added together.
+  shopExp: { every: 500, exp: 2 },
   // Player achievements (section 2.6). Each registered blader can earn each one once; the EXP goes to their guild.
   // Organizers tick them in the admin's Guild EXP tab, keyed by `id`, so keep ids stable when editing the text.
   // One with `auto` also comes by itself from the recorded Weekly Pods, Grand Raids and siege scores (see earnedAchievements);
@@ -171,8 +169,8 @@ window.LEAGUE_CONFIG = {
   }
   const entryExp = (entry, type, cfg) => entryExpParts(entry, type, cfg).reduce((sum, p) => sum + p.n, 0);
 
-  // Guild EXP for one shop receipt: the highest tier its amount reaches.
-  const purchaseExp = (amount, cfg) => cfg.shopExp.find((t) => amount >= t.min)?.exp || 0;
+  // Guild EXP for one shop receipt: `exp` per full `every` pesos on it.
+  const purchaseExp = (amount, cfg) => Math.floor((Number(amount) || 0) / cfg.shopExp.every) * cfg.shopExp.exp;
 
   // Who has each player achievement (achievement id -> blader keys). An `auto` one is worked out from the events (using
   // the roles recorded with each defeat) or the siege scores, so correcting either corrects it too; the rest are ticks.
