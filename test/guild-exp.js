@@ -50,6 +50,10 @@ assert.strictEqual(entryExp({ entries: 1, defeated: [{ role: "member", bounty: t
 // Both entries of a double-entry Guild Leader in the Bounty Guild beaten: each entry pays.
 assert.strictEqual(entryExp({ entries: 1, defeated: [{ role: "leader", bounty: true, times: 2 }] }, "pod", cfg), 42);
 assert.strictEqual(entryExp({ entries: 1, defeated: [{ role: "battle-master", times: 2 }] }, "raid", cfg), 24);
+// A champion from the Bounty Guild: +50 on top (+100 at a Grand Raid); the flag alone pays nothing without the title.
+assert.strictEqual(entryExp({ entries: 1, champion: true, role: "member", bounty: true }, "pod", cfg), 62);
+assert.strictEqual(entryExp({ entries: 1, champion: true, role: "leader", bounty: true }, "raid", cfg), 4 + 20 + 20 + 100);
+assert.strictEqual(entryExp({ entries: 1, bounty: true }, "pod", cfg), 2);
 
 // ----- Shop support tiers -----
 assert.strictEqual(purchaseExp(499, cfg), 0);

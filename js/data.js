@@ -88,6 +88,7 @@ window.LEAGUE_CONFIG = {
     champion: 10,
     championBattleMaster: 5, // on top of champion
     championLeader: 10, // on top of champion
+    championBounty: 50, // on top of champion, when the champion is a member of the event's Bounty Guild
     bountyBattleMaster: 5, // per opposing Battle Master defeated in the Top Cut
     bountyLeader: 10, // per opposing Guild Leader defeated in the Top Cut
     bountyGuild: 10, // per member of the Bounty Guild (Weekly Pods and Grand Raids) defeated in the Final Stage; stacks with the two above
@@ -145,7 +146,8 @@ window.LEAGUE_CONFIG = {
 
   // Guild EXP for one blader's entry at a Weekly Pod or Grand Raid. `role` and each defeat's `role` are the
   // roles recorded on the event date (leader / battle-master / member). A defeat's `bounty` marks a member of the
-  // Bounty Guild drawn for the Weekly Pod or Grand Raid (doubled at raids like the rest). A defeat's `times: 2` means both
+  // Bounty Guild drawn for the Weekly Pod or Grand Raid (doubled at raids like the rest); the entry's own `bounty` marks a
+  // champion who is a member of it (championBounty). A defeat's `times: 2` means both
   // entries of a double-entry blader were beaten; each entry counts, so its lines appear (and pay) twice.
   // entryExpParts lists what the entry paid, one line each ({ kind, n, player? }, raid doubling included) for the
   // battle log; entryExp is their total.
@@ -158,6 +160,7 @@ window.LEAGUE_CONFIG = {
       parts.push({ kind: "champion", n: E.champion });
       if (entry.role === "leader") parts.push({ kind: "champion-leader", n: E.championLeader });
       else if (entry.role === "battle-master") parts.push({ kind: "champion-battle-master", n: E.championBattleMaster });
+      if (entry.bounty) parts.push({ kind: "champion-bounty", n: E.championBounty });
     }
     (entry.defeated || []).flatMap((d) => (d.times === 2 ? [d, d] : [d])).forEach((d) => {
       if (d.role === "leader") parts.push({ kind: "bounty-leader", n: E.bountyLeader, player: d.player });
