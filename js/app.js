@@ -124,10 +124,8 @@
     return `--${prefix}-bg:${fill};--${prefix}-line:${line || fill};--${prefix}-ink:${inkFor(fill)}`;
   }
 
-  // Images uploaded in the admin are loaded with CORS so profile cards can draw them onto a canvas.
-  const ADMIN_ORIGIN = CFG.leagueUrl ? new URL(CFG.leagueUrl).origin : null;
-  const imgTag = (src, attrs = "") =>
-    `<img src="${esc(src)}" alt=""${ADMIN_ORIGIN && src.startsWith(`${ADMIN_ORIGIN}/`) ? ' crossorigin="anonymous"' : ""}${attrs}>`;
+  // Uploaded images are /api/image paths on this site, so share cards can draw them onto a canvas.
+  const imgTag = (src, attrs = "") => `<img src="${esc(src)}" alt=""${attrs}>`;
 
   function avatarHtml(label, photo = "", teamName = "") {
     const style = guildStyle(teamName, "av");
@@ -190,19 +188,10 @@
         const res = await fetch(CFG.leagueUrl, { cache: "no-store", signal: controller.signal });
         if (!res.ok) throw new Error(`The league data request failed with status ${res.status}.`);
         const league = await res.json();
-        // Uploaded logos and photos are /api/image paths on the admin's deployment. The
-        // `cors` param gives them a new URL, so browsers don't reuse copies cached before
-        // the admin sent CORS headers (images are cached as immutable for a year).
-        const fromAdmin = (ref) => {
-          if (!ref || !ref.startsWith("/api/")) return ref;
-          const url = new URL(ref, CFG.leagueUrl);
-          url.searchParams.set("cors", "1");
-          return url.href;
-        };
-        league.guilds = (league.guilds || []).map((g) => ({ ...g, logo: fromAdmin(g.logo) }));
-        league.players = (league.players || []).map((p) => ({ ...p, photo: fromAdmin(p.photo) }));
+        // Uploaded logos, photos and posters are /api/image paths, served from this site like /api/league.
+        league.guilds = league.guilds || [];
+        league.players = league.players || [];
         league.season = { weeks: [], matches: [], ...league.season };
-        league.season.weeks = league.season.weeks.map((w) => ({ ...w, poster: fromAdmin(w.poster) }));
         league.results = league.results || {};
         return league;
       } catch (err) {

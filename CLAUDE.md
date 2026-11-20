@@ -6,14 +6,14 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 GUM Guild Wars: a static, installable (PWA) dashboard for a Beyblade league. It shows standings, MVP rankings, finish stats, a battle log and a guild territory map. It uses plain HTML/CSS/vanilla JS with no build step, no package manager and no tests. It deploys to Vercel as a static site (`.vercel` is gitignored).
 
-The league admin (organizer login, guild/blader editing, schedule, score entry) and its `/api` used to live here. It now has its own repository and Vercel deployment, `GUM-GuildWars-Admin`. This repo only *reads* from it.
+The league admin (organizer login, guild/blader editing, schedule, score entry) and its `/api` used to live here. It is now a separate, private project, and this repo only *reads* from it. **This repo is public: never write the admin's address, domain or repository name anywhere in it** (code, comments, docs, commit messages). The public site must not reveal where the admin is; the address lives only in the Vercel env var `ADMIN_ORIGIN` and a local, gitignored `.env.local`.
 
 ## Running locally
 
 Serve the folder over HTTP rather than opening `index.html` as a `file://`. The service worker only registers on `http(s)`, and `fetch` needs a real origin:
 
 ```
-npx serve -s .     # -s serves index.html for /Schedules, like vercel.json does
+node dev.mjs     # http://localhost:5500; runs middleware.js, so /api/league works (needs ADMIN_ORIGIN in .env.local)
 ```
 
 Third-party libraries load from CDNs: Leaflet and markercluster (unpkg/cdnjs), Font Awesome, Google Fonts, and html2canvas, which is fetched lazily the first time a profile is shared.
@@ -27,9 +27,9 @@ The scripts load in order with `defer`. Each file is an IIFE that communicates t
 
 ### Data source
 
-All league data (guilds, bladers, the schedule and results) comes from the admin's `/api/league` (`CFG.leagueUrl`). The site has no sample or fallback data. `fetchLeague()` tries twice with a 10s timeout each; if both fail, a full-screen error replaces the page. While loading, the containers in `index.html` show `.skel` skeleton placeholders that the renders overwrite. The API sends `Access-Control-Allow-Origin: *`, so opening `index.html` from disk also works for a quick check.
+All league data (guilds, bladers, the schedule and results) comes from `/api/league` on this site (`CFG.leagueUrl`). `middleware.js` answers `/api/league` and `/api/image` (GET only) by fetching them from `ADMIN_ORIGIN` and passing on only `content-type`, `cache-control` and `x-content-type-options`, so the browser never contacts the admin. The service worker skips `/api/`. The site has no sample or fallback data. `fetchLeague()` tries twice with a 10s timeout each; if both fail, a full-screen error replaces the page. While loading, the containers in `index.html` show `.skel` skeleton placeholders that the renders overwrite.
 
-`leagueToRaw()` converts the admin's `{season, results, guilds, players}` into the raw shape that `buildModel()` uses. Only matches with `status: "final"` (bouts) or `"default"` (forfeit winner) count. Image refs that start with `/api/` are rewritten to absolute URLs on the admin's domain.
+`leagueToRaw()` converts the admin's `{season, results, guilds, players}` into the raw shape that `buildModel()` uses. Only matches with `status: "final"` (bouts) or `"default"` (forfeit winner) count. Image refs (`/api/image?id=…`) stay relative, so they load from this site through the middleware.
 
 The **raw shape** is `{ updatedAt, weeks: [{label, date, location, poster, time, fee, link, description, progress}], teams, players, matches: [{id, week, bracket, team1, team2, bouts: [{p1, p2, p1Pts, p2Pts, rounds: [{winner, finish}]}], defaultWinner?}] }`. `buildModel()` derives all stats from it: per-player `overall`/`weekly` stat lines, MVP score, qualification, and team records. Every render function has to cope with an empty season (guilds but no bladers, weeks or matches).
 
@@ -39,7 +39,7 @@ The scoring follows the GGW2 handbook, and its values live in `data.js` (`eventE
 **Guild Quest badges** are defined in `CFG.guildQuests` (data.js; the admin reads the same list). The admin stores which guilds completed each quest in `exp.quests` (`{ questId: [guildName] }`), and `guildQuestBlock()` shows them under the roster as locked or unlocked. Keep quest `id`s stable when editing the text.
 
 ### Schedules page
-A scrolling page (`renderSchedule()`): the calendar and the Upcoming Event panel side by side, and the Guild Siege match-ups below. A Weekly Pod or Grand Raid with a Bounty Guild drawn in the admin (`bountyGuild` on the season week) shows it in the event panel, opening that guild. A Guild Siege week's `targets` (each guild's up to 3 target guilds, set in the admin's week editor) open from a Target Board button there, in `#targets-modal` (`targetList()`). The event panel shows the day picked on the calendar (any kind, Guild Sieges included; clicking it again clears it), or else the next pod, Grand Raid or Guild Siege, with its poster (opens full size) and details. Posters, start time, entry fee, link and description are set per week in the admin's Schedule tab; posters are admin `/api/image` paths rewritten by `fromAdmin()` like logos.
+A scrolling page (`renderSchedule()`): the calendar and the Upcoming Event panel side by side, and the Guild Siege match-ups below. A Weekly Pod or Grand Raid with a Bounty Guild drawn in the admin (`bountyGuild` on the season week) shows it in the event panel, opening that guild. A Guild Siege week's `targets` (each guild's up to 3 target guilds, set in the admin's week editor) open from a Target Board button there, in `#targets-modal` (`targetList()`). The event panel shows the day picked on the calendar (any kind, Guild Sieges included; clicking it again clears it), or else the next pod, Grand Raid or Guild Siege, with its poster (opens full size) and details. Posters, start time, entry fee, link and description are set per week in the admin's Schedule tab; posters are `/api/image` paths like logos.
 
 ### Handbook page
 `/Handbook` (`renderHandbook()`, the last step of `renderDashboard()`) explains scoring, ranking, Guild EXP, Skill EXP, achievements and quests. It is built from the same `data.js` values (and the season's guild skills) the scoring uses, so change the numbers there, not on the page. Like `/Schedules`, it has a `vercel.json` rewrite and its own og:url in `middleware.js`.

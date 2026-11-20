@@ -1,5 +1,5 @@
 // Network-first service worker: always try fresh data, fall back to cache offline.
-const CACHE = "gum-guild-wars-v11";
+const CACHE = "gum-guild-wars-v12";
 const SHELL = ["./", "index.html", "css/styles.css", "js/data.js", "js/app.js", "manifest.json", "images/gumverse-logo.webp", "images/ggw2-logo.webp"];
 
 self.addEventListener("install", (event) => {
@@ -15,8 +15,9 @@ self.addEventListener("activate", (event) => {
 });
 
 self.addEventListener("fetch", (event) => {
-  // Only handle this site's own files; league data (from the admin's API) is never cached.
-  if (event.request.method !== "GET" || new URL(event.request.url).origin !== location.origin) return;
+  // Only handle this site's own files; league data and images (/api/) are never cached.
+  const url = new URL(event.request.url);
+  if (event.request.method !== "GET" || url.origin !== location.origin || url.pathname.startsWith("/api/")) return;
   event.respondWith(
     fetch(event.request)
       .then((res) => {
