@@ -101,7 +101,8 @@ assert.deepStrictEqual(earned.pa9, ["a", "ticked"]);
 assert.deepStrictEqual(earned.pa10, ["b"]);
 assert.deepStrictEqual(earnedAchievements({}, [], [], cfg).pa7, []);
 
-// Full Deployment: every active blader on the current roster in all four raids. Inactive bladers don't count or earn it.
+// Full Deployment: every active blader on the current roster in the same Grand Raid (any one of the four).
+// Inactive bladers don't count or earn it.
 const roster = [
   { key: "a1", team: "A", active: true }, { key: "a2", team: "A", active: true }, { key: "a3", team: "A", active: false },
   { key: "b1", team: "B", active: true }, { key: "b2", team: "B", active: true },
@@ -110,10 +111,10 @@ const raid = (...keys) => ({ type: "raid", entries: keys.map((player) => ({ play
 const raids = (n, ...keys) => Array.from({ length: n }, () => raid(...keys));
 const full = (events) => sorted(earnedAchievements({ events }, [], roster, cfg).pa3);
 assert.deepStrictEqual(earnedAchievements({ playerAchievements: { pa7: ["a", "a"] }, events: [{ type: "pod", entries: [{ player: "a", swiss: true }] }] }, [], [], cfg).pa7, ["a"]);
-assert.deepStrictEqual(full(raids(4, "a1", "a2", "b1")), ["a1", "a2"]); // b2 missed them, so nobody in B has it; a3 is inactive
-assert.deepStrictEqual(full(raids(3, "a1", "a2", "b1", "b2")), []); // only three so far
-assert.deepStrictEqual(full([...raids(3, "a1", "a2"), raid("a1")]), []); // a2 missed one
-assert.deepStrictEqual(full([...raids(4, "a1", "a2"), { type: "pod", entries: [] }]), ["a1", "a2"]); // pods don't count
+assert.deepStrictEqual(full([raid("a1", "a2", "b1")]), ["a1", "a2"]); // one raid is enough; b2 missed it, so nobody in B has it; a3 is inactive
+assert.deepStrictEqual(full([raid("a1", "b1"), raid("a2", "b2")]), []); // each took part, but never all together
+assert.deepStrictEqual(full([raid("a1"), raid("b1", "b2"), raid("a1", "a2")]), ["a1", "a2", "b1", "b2"]); // any of the raids
+assert.deepStrictEqual(full([{ type: "pod", entries: [{ player: "a1" }, { player: "a2" }] }]), []); // pods don't count
 
 // Achievements from siege scores. A leg: attacker A or B, bouts as [attacker's blader, defender's blader, attacker won?].
 const leg = (week, round, attacker, defender, winner, bouts = []) => ({

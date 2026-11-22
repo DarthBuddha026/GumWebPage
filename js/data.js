@@ -109,7 +109,7 @@ window.LEAGUE_CONFIG = {
   playerAchievements: [
     { id: "pa1", name: "War Machine", exp: 10, icon: "fa-hammer", auto: "attack-streak", text: "Be deployed in three consecutive successful Guild attack legs during Guild Sieges." },
     { id: "pa2", name: "Fortress", exp: 10, icon: "fa-chess-rook", auto: "defense-streak", text: "Be deployed in three consecutive successful Guild defense legs during Guild Sieges." },
-    { id: "pa3", name: "Full Deployment", exp: 5, icon: "fa-people-group", auto: "full-deployment", text: "Be part of a Guild whose entire official roster participates in all four Grand Raids." },
+    { id: "pa3", name: "Full Deployment", exp: 5, icon: "fa-people-group", auto: "full-deployment", text: "Be part of a Guild whose entire official roster participates together in one of the four Grand Raids." },
     { id: "pa4", name: "Perfect War", exp: 10, icon: "fa-crown", auto: "perfect-leg", text: "Be deployed in a Guild Siege attack or defense leg won without losing an individual matchup." },
     { id: "pa5", name: "We Feast Tonight!", exp: 5, icon: "fa-drumstick-bite", auto: "first-deployment", text: "Be deployed in your first official Guild Siege leg." },
     { id: "pa6", name: "Extreme Specialist", exp: 10, icon: "fa-bolt", auto: "extreme-specialist", text: "Score at least two Xtreme Finishes in one individual matchup during a Guild Siege." },
@@ -208,13 +208,14 @@ window.LEAGUE_CONFIG = {
     return earned;
   };
 
-  // Every active blader on the guild's current roster entered all four Grand Raids. Each raid is one recorded event.
+  // Every active blader on the guild's current roster entered the same Grand Raid. Each raid is one recorded event.
   const fullDeployment = (exp, legs, players) => {
+    // Every active blader of the guild took part in the same Grand Raid (any one of them).
     const raids = (exp.events || []).filter((ev) => ev.type === "raid").map((ev) => new Set(ev.entries.map((en) => en.player)));
     const active = players.filter((p) => p.active);
-    if (raids.length < 4) return new Set();
-    const missing = new Set(active.filter((p) => !raids.every((r) => r.has(p.key))).map((p) => p.team));
-    return new Set(active.filter((p) => !missing.has(p.team)).map((p) => p.key));
+    const roster = (team) => active.filter((p) => p.team === team);
+    const full = new Set([...new Set(active.map((p) => p.team))].filter((team) => raids.some((r) => roster(team).every((p) => r.has(p.key)))));
+    return new Set(active.filter((p) => full.has(p.team)).map((p) => p.key));
   };
 
   // Deployed on the winning side of a leg where that side lost no bout.
