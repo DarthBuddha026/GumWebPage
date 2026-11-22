@@ -290,6 +290,8 @@
     // GGW2 player achievements each blader has unlocked (shown as cards on their profile, apart from the exclusive badges).
     players.forEach((p) => (p.unlocked = new Set()));
     Object.entries(window.leagueTools.earnedAchievements(raw.exp || {}, sieges, players)).forEach(([id, keys]) => keys.forEach((k) => playersByKey.get(k)?.unlocked.add(id)));
+    // Guild Quests completed (quest id -> guilds): from the records, plus the organizers' ticks.
+    state.quests = window.leagueTools.earnedQuests(raw.exp || {}, sieges, players);
     state.expSkills = (raw.exp?.skills || []).slice().sort((a, b) => a.exp - b.exp);
     // The required Guild EXP: the Guild EXP bar is full here, but guilds keep earning past it.
     state.expCap = raw.exp?.cap || 0;
@@ -1354,13 +1356,13 @@
     animateMeters($("#roster-view"));
   }
 
-  const questsDone = (t) => (CFG.guildQuests || []).filter((q) => (state.raw.exp?.quests?.[q.id] || []).includes(t.name)).length;
+  const questsDone = (t) => (CFG.guildQuests || []).filter((q) => (state.quests[q.id] || []).includes(t.name)).length;
 
-  // Guild Quest badges (CFG.guildQuests), unlocked once the admin marks the quest complete for this guild.
+  // Guild Quest badges (CFG.guildQuests), unlocked from the records or once the admin marks the quest complete.
   function guildQuestBlock(t) {
     const quests = CFG.guildQuests || [];
     if (!quests.length) return "";
-    const done = state.raw.exp?.quests || {};
+    const done = state.quests;
     const badges = quests
       .map((q) => {
         const on = (done[q.id] || []).includes(t.name);
@@ -1883,11 +1885,11 @@
     }
     const quests = CFG.guildQuests || [];
     if (quests.length) {
-      const done = quests.filter((q) => (state.raw.exp?.quests?.[q.id] || []).includes(t.name));
+      const done = quests.filter((q) => (state.quests[q.id] || []).includes(t.name));
       const lines = done.map((q) => expLine({ icon: q.icon || "fa-medal", title: `Quest ${esc(q.numeral)}: ${esc(q.name)}`, sub: esc(q.text), amount: "Badge", cls: "quest-line" }));
       guildParts.push(`
         <h6>Guild Quest badges <span class="exp-total">${done.length} <small>/ ${quests.length}</small></span></h6>
-        <p class="exp-rule">A quest unlocks its badge when the organizers mark it complete. Quests don't add EXP.</p>
+        <p class="exp-rule">A quest unlocks its badge once the records show it (Quests I, II and IV) or the organizers mark it complete. Quests don't add EXP.</p>
         <ul class="exp-lines">${lines.join("") || empty("No quests completed yet.")}</ul>`);
     }
 

@@ -199,4 +199,19 @@ assert.deepStrictEqual(logAll.filter((l) => l.kind === "event").map((l) => [l.pl
 assert.deepStrictEqual(logAll.filter((l) => l.kind === "shop").map((l) => [l.player, l.n]), [[undefined, 6]]);
 assert.strictEqual(logAll.filter((l) => l.kind === "achievement").length, 4);
 
+// ----- Guild Quests: I, II and IV from the records, plus the organizers' ticks -----
+{
+  const { earnedQuests } = window.leagueTools;
+  const qp = ["a1", "a2", "a3", "a4", "a5", "b1", "b2", "b3"].map((key) => ({ key, team: key[0].toUpperCase() }));
+  const ev = (type, keys) => ({ type, entries: keys.map((player) => ({ player, entries: 1 })) });
+  // II: A has 5 members in one raid (a double-listed blader counts once); B has 3.
+  // IV: B has 3 members in two pods; A only in one.
+  const quests = { events: [ev("raid", ["a1", "a2", "a3", "a4", "a5", "a5", "b1", "b2", "b3"]), ev("pod", ["b1", "b2", "b3", "a1", "a2", "a3"]), ev("pod", ["b1", "b2", "b3", "a1"])], quests: { q3: ["B"], q2: ["B"] } };
+  // I: A plays scored legs in 3 siege weeks; B plays 2 and loses one by default (doesn't count), C wins one by default (counts).
+  const leg = (week, attacker, defender, winner, played = true) => ({ week, attacker, defender, winner, bouts: played ? [{}] : [] });
+  const qlegs = [leg("s1", "A", "B", "A"), leg("s2", "A", "B", "B"), leg("s3", "A", "C", "A"), leg("s3", "B", "C", "C", false), leg("s1", "C", "D", "C", false), leg("s2", "C", "D", "C", false), leg("s4", "A", "D", null)];
+  const got = earnedQuests(quests, qlegs, qp);
+  assert.deepStrictEqual([got.q1, got.q2.sort(), got.q3, got.q4], [["A", "C"], ["A", "B"], ["B"], ["B"]]);
+}
+
 console.log("guildExp ok");

@@ -69,12 +69,13 @@ window.LEAGUE_CONFIG = {
   ],
 
   // Guild Quest badges. Organizers mark which guilds completed each one in the admin's Guild EXP tab,
-  // keyed by `id`, so keep ids stable when editing the text.
+  // keyed by `id`, so keep ids stable when editing the text. One with `auto` also unlocks by itself from the
+  // siege scores or the recorded Weekly Pods and Grand Raids (see earnedQuests).
   guildQuests: [
-    { id: "q1", numeral: "I", name: "The Siegebound Oath", text: "Attend at least 3 of the 4 Guild Sieges.", icon: "fa-flag" },
-    { id: "q2", numeral: "II", name: "Assembly of the Grand Company", text: "At least 5 registered members of the same guild take part together in 1 Grand Raid.", icon: "fa-people-group" },
+    { id: "q1", numeral: "I", name: "The Siegebound Oath", text: "Attend at least 3 of the 4 Guild Sieges.", icon: "fa-flag", auto: "siege-attendance" },
+    { id: "q2", numeral: "II", name: "Assembly of the Grand Company", text: "At least 5 registered members of the same guild take part together in 1 Grand Raid.", icon: "fa-people-group", auto: "raid-assembly" },
     { id: "q3", numeral: "III", name: "Chronicle of the Guild", text: "Create an official guild roster introduction video and submit it to GUM.", icon: "fa-video" },
-    { id: "q4", numeral: "IV", name: "Trial of Fellowship", text: "At least 3 registered members of the same guild take part together in 2 separate Weekly Pods.", icon: "fa-handshake" },
+    { id: "q4", numeral: "IV", name: "Trial of Fellowship", text: "At least 3 registered members of the same guild take part together in 2 separate Weekly Pods.", icon: "fa-handshake", auto: "pod-fellowship" },
     { id: "q5", numeral: "V", name: "Fellowship Beyond the Arena", text: "Submit a presentable video of at least 3 minutes showing the guild bonding outside regular tournament play.", icon: "fa-campground" },
   ],
 
@@ -255,6 +256,42 @@ window.LEAGUE_CONFIG = {
       // Earned automatically or ticked by an organizer (each blader counts once).
       const ticked = exp.playerAchievements?.[a.id] || [];
       earned[a.id] = work ? [...new Set([...work(exp, legs, players), ...ticked])] : ticked;
+    });
+    return earned;
+  }
+
+  // Guild Quests a guild has completed (quest id -> guild names): those with `auto` from the records, plus the
+  // organizers' ticks. Members are counted by the guild each blader is in now (entries don't record one).
+  // A guild attends a siege when it plays a scored leg that week, or wins one by default.
+  const membersIn = (ev, players) => {
+    const team = new Map(players.map((p) => [p.key, p.team]));
+    const count = new Map();
+    new Set(ev.entries.map((en) => en.player)).forEach((k) => team.get(k) && count.set(team.get(k), (count.get(team.get(k)) || 0) + 1));
+    return count;
+  };
+  const eventsWith = (type, min) => (exp, players) => {
+    const hits = new Map();
+    (exp.events || []).filter((ev) => ev.type === type).forEach((ev) => membersIn(ev, players).forEach((n, g) => n >= min && hits.set(g, (hits.get(g) || 0) + 1)));
+    return hits;
+  };
+  const AUTO_QUESTS = {
+    "siege-attendance": (exp, legs) => {
+      const weeks = new Map();
+      legs.filter((leg) => leg.winner).forEach((leg) => {
+        const played = (leg.bouts || []).length || (leg.unplayed || []).length;
+        [leg.attacker, leg.defender].filter((g) => played || g === leg.winner).forEach((g) => weeks.set(g, (weeks.get(g) || new Set()).add(leg.week)));
+      });
+      return [...weeks].filter(([, w]) => w.size >= 3).map(([g]) => g);
+    },
+    "raid-assembly": (exp, legs, players) => [...eventsWith("raid", 5)(exp, players).keys()],
+    "pod-fellowship": (exp, legs, players) => [...eventsWith("pod", 3)(exp, players)].filter(([, n]) => n >= 2).map(([g]) => g),
+  };
+  function earnedQuests(exp, legs = [], players = [], cfg = window.LEAGUE_CONFIG) {
+    const earned = {};
+    (cfg.guildQuests || []).forEach((q) => {
+      const ticked = exp.quests?.[q.id] || [];
+      const work = AUTO_QUESTS[q.auto];
+      earned[q.id] = work ? [...new Set([...work(exp, legs, players), ...ticked])] : ticked;
     });
     return earned;
   }
@@ -493,5 +530,5 @@ window.LEAGUE_CONFIG = {
     return { teams: rankTeams(teams), teamsByName, players, playersByKey, league: players.filter((p) => p.eligible).sort(leagueSort) };
   }
 
-  window.leagueTools = { roundRobin, guildExp, earnedAchievements, entryExp, entryExpParts, purchaseExp, leagueStats, leagueSort, rankTeams, medianBuchholz };
+  window.leagueTools = { roundRobin, guildExp, earnedAchievements, earnedQuests, entryExp, entryExpParts, purchaseExp, leagueStats, leagueSort, rankTeams, medianBuchholz };
 })();
