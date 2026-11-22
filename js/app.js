@@ -993,7 +993,9 @@
         ["Each opposing Guild Leader beaten in the Top Cut", E.bountyLeader],
         ["Each opposing Battle Master beaten in the Top Cut", E.bountyBattleMaster],
         ["Each Bounty Guild member beaten in the Final Stage", E.bountyGuild, true],
-      ].map(([label, n, extra]) => [label, ...[n, n * E.raidMultiplier].map((v) => (extra ? `+${v}` : v))])) +
+      ]
+        .map(([label, n, extra]) => [label, ...[n, n * E.raidMultiplier].map((v) => (extra ? `+${v}` : v))])
+        .concat([["Beating the Tournament Organizer (Shivs) in the Top Cut", "–", E.organizerBounty]])) +
         list(
           [
             "EXP goes to the blader's guild, and never goes down.",
@@ -1803,6 +1805,7 @@
     "bounty-leader": "Defeated Guild Leader",
     "bounty-battle-master": "Defeated Battle Master",
     "bounty-guild": "Defeated Bounty Guild member",
+    "bounty-organizer": "Defeated the Tournament Organizer",
   };
   const expFmt = (n) => (n > 0 ? `+${n.toLocaleString()}` : n < 0 ? `−${Math.abs(n).toLocaleString()}` : "0");
   const peso = (n) => `₱${Number(n).toLocaleString(undefined, { maximumFractionDigits: 2 })}`;

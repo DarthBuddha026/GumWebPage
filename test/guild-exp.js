@@ -54,6 +54,9 @@ assert.strictEqual(entryExp({ entries: 1, defeated: [{ role: "battle-master", ti
 assert.strictEqual(entryExp({ entries: 1, champion: true, role: "member", bounty: true }, "pod", cfg), 62);
 assert.strictEqual(entryExp({ entries: 1, champion: true, role: "leader", bounty: true }, "raid", cfg), 4 + 20 + 20 + 100);
 assert.strictEqual(entryExp({ entries: 1, bounty: true }, "pod", cfg), 2);
+// Beating the Tournament Organizer in a Grand Raid's Top Cut: +20 as is (not doubled); nothing at a Weekly Pod.
+assert.strictEqual(entryExp({ entries: 1, beatOrganizer: true }, "raid", cfg), 4 + 20);
+assert.strictEqual(entryExp({ entries: 1, beatOrganizer: true }, "pod", cfg), 2);
 
 // ----- Shop support: 2 per full ₱500 on one receipt -----
 assert.strictEqual(purchaseExp(499, cfg), 0);

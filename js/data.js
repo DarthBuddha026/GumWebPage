@@ -92,8 +92,11 @@ window.LEAGUE_CONFIG = {
     bountyBattleMaster: 5, // per opposing Battle Master defeated in the Top Cut
     bountyLeader: 10, // per opposing Guild Leader defeated in the Top Cut
     bountyGuild: 10, // per member of the Bounty Guild (Weekly Pods and Grand Raids) defeated in the Final Stage; stacks with the two above
+    organizerBounty: 20, // Grand Raids only, as is (not doubled): beating the Tournament Organizer in the Top Cut
     raidMultiplier: 2,
   },
+  // The Tournament Organizer's Challonge names (not a Guild Wars blader); the Weekly Pod / Grand Raid import spots wins over them.
+  tournamentOrganizer: ["GUM_Shivs", "Shivs"],
   // Shop support: `exp` Guild EXP for every full `every` pesos of qualifying products on one approved receipt.
   // Receipts are never added together.
   shopExp: { every: 500, exp: 2 },
@@ -165,7 +168,10 @@ window.LEAGUE_CONFIG = {
       else if (d.role === "battle-master") parts.push({ kind: "bounty-battle-master", n: E.bountyBattleMaster, player: d.player });
       if (d.bounty) parts.push({ kind: "bounty-guild", n: E.bountyGuild, player: d.player });
     });
-    return parts.map((p) => ({ ...p, n: p.n * x }));
+    const paid = parts.map((p) => ({ ...p, n: p.n * x }));
+    // Beating the Tournament Organizer in a Grand Raid's Top Cut pays as is, not doubled.
+    if (type === "raid" && entry.beatOrganizer) paid.push({ kind: "bounty-organizer", n: E.organizerBounty });
+    return paid;
   }
   const entryExp = (entry, type, cfg) => entryExpParts(entry, type, cfg).reduce((sum, p) => sum + p.n, 0);
 
