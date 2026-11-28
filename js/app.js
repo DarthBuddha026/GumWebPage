@@ -581,8 +581,6 @@
     const weeks = (state.raw.weeks || []).filter(isSeasonDay);
     const played = state.raw.matches.filter((m) => m.bouts?.length || m.defaultWinner).length;
     const total = state.raw.matches.length;
-    const withGames = state.players.filter((p) => p.overall.games);
-    const avgPPG = withGames.length ? withGames.reduce((s, p) => s + p.overall.ppg, 0) / withGames.length : 0;
     const current = weeks.find((w) => w.label === state.currentWeek);
     // Weeks arrive sorted by date, so the first one opens the season.
     const opener = weeks[0];
@@ -602,7 +600,7 @@
         : "The schedule hasn't been posted yet."
       : !played
         ? `${plural(total, "guild match", "guild matches")} on the schedule.`
-        : `${played} of ${total} guild matches are done, and bladers average ${fmt2(avgPPG)} points a game.`;
+        : `${played} of ${total} guild matches are done.`;
     $("#hero-status").textContent = `Season ${CFG.season}. ${weekText} ${progressText}`;
 
     const updated = state.raw.updatedAt ? new Date(state.raw.updatedAt) : new Date();
